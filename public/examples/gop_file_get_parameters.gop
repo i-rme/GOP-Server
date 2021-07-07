@@ -1,0 +1,5 @@
+<!go
+
+fmt.Println("The value of _GET[\"key\"]: ", _GET["key"])
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _GET map: ", _GET)

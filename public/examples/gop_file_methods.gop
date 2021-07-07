@@ -1,0 +1,18 @@
+<!go
+
+fmt.Println("<h2>This script can recognize between multiple request methods:</h2>")
+
+switch _SERVER["REQUEST_METHOD"] {
+case "GET":
+    fmt.Println("<h3>GET was used</h3>")
+case "POST":
+    fmt.Println("<h3>POST was used</h3>")
+case "PATCH":
+    fmt.Println("<h3>PATCH was used</h3>")
+case "PUT":
+    fmt.Println("<h3>PUT was used</h3>")
+case "DELETE":
+    fmt.Println("<h3>DELETE was used</h3>")
+default:
+    fmt.Println("<h3>UNKNOWN METHOD was used</h3>")
+}

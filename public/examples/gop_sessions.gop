@@ -1,0 +1,16 @@
+<!go
+
+_session_start()
+
+fmt.Println("<h2>Sessions</h2>")
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _COOKIE map: ", _COOKIE)
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _SESSION map: ", _SESSION)
+
+_setsession("a1", "example")
+_setsession("b2", "second example")
+
+fmt.Println("<h2>After</h2>")
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _SESSION map: ", _SESSION)

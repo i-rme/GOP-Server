@@ -1,0 +1,9 @@
+<!go
+
+import (
+	"math/rand"
+)
+
+rand.Seed(42)
+
+fmt.Println(rand.Intn(10000))

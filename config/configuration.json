@@ -1,0 +1,43 @@
+{
+    "Port": 80,
+    "Address": "127.0.0.1",
+
+    "ReadTimeout": 12000000000,
+    "WriteTimeout": 12000000000,
+    "IdleTimeout": 60000000000,
+    "MaxHeaderBytes": 1000000,
+
+    "DocumentRoot": "public",
+    "CacheRoot": "cache",
+    "LogRoot": "logs",
+    "UploadsRoot": "private/uploads",
+
+    "Aliases": {
+      "/api/": "/examples/gop_api.gop"
+    },
+
+    "DenyFrom": [
+      "10.1.2.0/24"
+    ],
+
+    "ServerSignature": "Golang Preprocessor for Web Services v1.0",
+
+    "DirectoryListingScript": "/../private/scripts/DirectoryListing.gop",
+    "IPDeniedScript": "/../private/scripts/ip_denied.gop",
+
+    "SessionCookieName": "GopSession",
+
+    "GopHeadersSeparator": "<!--GOP-HEADERS-S3P4R4T0R",
+
+    "LoggingLevel": "debug",
+
+    "GopKeySalt": "INSERT_RANDOM_SECURE_STRING_HERE",
+    
+    "RateLimitEnabled": false,
+    "RateLimitRate": 10,
+    "RateLimitPeriod": 20,
+    "RateLimitedScript": "/../private/scripts/ip_ratelimited.gop",
+
+    "MySQLSupportEnabled": false,
+    "RunScriptsAsNobody": false
+  }

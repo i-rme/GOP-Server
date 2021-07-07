@@ -1,0 +1,26 @@
+<!go
+
+fmt.Println("<h2>This should work</h2>")
+
+
+fmt.Println("<br/> The value of _SERVER[\"GOP_SELF\"]: ", _SERVER["GOP_SELF"])
+fmt.Println("<br/> The value of _SERVER[\"HTTP_REFERER\"]: ", _SERVER["HTTP_REFERER"])
+fmt.Println("<br/> The value of _SERVER[\"HTTP_USER_AGENT\"]: ", _SERVER["HTTP_USER_AGENT"])
+fmt.Println("<br/> The value of _SERVER[\"REMOTE_ADDR\"]: ", _SERVER["REMOTE_ADDR"])
+fmt.Println("<br/> The value of _SERVER[\"REQUEST_METHOD\"]: ", _SERVER["REQUEST_METHOD"])
+fmt.Println("<br/> The value of _SERVER[\"REQUEST_URI\"]: ", _SERVER["REQUEST_URI"])
+fmt.Println("<br/> The value of _SERVER[\"SCRIPT_NAME\"]: ", _SERVER["SCRIPT_NAME"])
+fmt.Println("<br/> The value of _SERVER[\"SCRIPT_BASENAME\"]: ", _SERVER["SCRIPT_BASENAME"])
+fmt.Println("<br/> The value of _SERVER[\"SERVER_NAME\"]: ", _SERVER["SERVER_NAME"])
+fmt.Println("<br/> The value of _SERVER[\"SERVER_PROTOCOL\"]: ", _SERVER["SERVER_PROTOCOL"])
+fmt.Println("<br/>")
+fmt.Println("<br/> The value of _SERVER[\"DOCUMENT_ROOT\"]: ", _SERVER["DOCUMENT_ROOT"])
+fmt.Println("<br/> The value of _SERVER[\"SCRIPT_PATH\"]: ", _SERVER["SCRIPT_PATH"])
+fmt.Println("<br/> The value of _SERVER[\"SCRIPT_PATH_RELATIVE\"]: ", _SERVER["SCRIPT_PATH_RELATIVE"])
+fmt.Println("<br/> The value of _SERVER[\"CURRENT_PATH\"]: ", _SERVER["CURRENT_PATH"])
+
+
+
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _SERVER map: ", _SERVER)
+

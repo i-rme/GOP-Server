@@ -1,0 +1,4 @@
+<!go
+fmt.Println("<h2>This line comes from the required file 2 (example_required2.gop)</h2>")
+require "example_required3.gop"
+require "example_required4.gop"

@@ -1,0 +1,21 @@
+<!go
+
+if authorization, isSet := _HEADER["Authorization"]; isSet {
+    user, pass := _parseAuthentication(authorization)
+
+    if(user == "bob" && pass == "1234"){
+        fmt.Println("<h2>HTTP Auth Successful</h2>")
+        fmt.Println(user, pass)
+    }else{
+        _require_basic_auth("Private Gop Server")
+
+        fmt.Println("<h2>Authentication required</h2>")
+        fmt.Println("<h3>Bad user/pass</h3>")
+    }
+
+}else{
+    _require_basic_auth("Private Gop Server")
+
+    fmt.Println("<h2>Authentication required</h2>")
+    fmt.Println("<h3>No auth was provided</h3>")
+}

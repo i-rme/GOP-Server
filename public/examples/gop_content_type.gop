@@ -1,0 +1,4 @@
+<!go
+_header("Content-Type: application/json")
+
+fmt.Println("<h2>Content Type</h2>")

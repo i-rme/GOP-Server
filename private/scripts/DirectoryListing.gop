@@ -1,0 +1,61 @@
+<!go
+
+require "../includes/template.gop"
+
+/*
+    DirectoryListing.gop
+    This file is needed to for Directory Listing to work as 
+    it is loaded when a directory has no Index.
+*/
+
+import (
+    "path/filepath"
+)
+
+files, err := filepath.Glob(_SERVER["SCRIPT_PATH"] + "/*")   // Array with files on the current path
+
+if err != nil{
+    fmt.Println("Error")
+}
+
+
+parentDirectory := filepath.Dir(_SERVER["SCRIPT_PATH_RELATIVE"])
+
+
+fmt.Println(`<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Index of ` + _SERVER["SCRIPT_PATH_RELATIVE"] + ` - ` + _SERVER["SIGNATURE"] + `</title>
+
+    ` + TemplateStyles + `
+</head>
+
+<body>
+
+    <center>
+
+    ` + TemplateLogo + `
+
+    <h1 class="title">Index of ` + _SERVER["SCRIPT_PATH_RELATIVE"] + `</h1>
+    </center>
+    <br>
+
+    <div class="content">`)
+
+fmt.Println(`<p><a href="` + parentDirectory + `">Parent directory</a></p>`)
+
+for _, filePath := range files{
+
+    filePathRelative := strings.Replace(filePath, _SERVER["DOCUMENT_ROOT"], "", 1)   // Removes the document root from the path
+    fileName := filepath.Base(filePathRelative)
+
+    fmt.Println(`<p><a href="` + filePathRelative + `">` + fileName + `</a></p>`)
+}
+
+
+fmt.Print(`
+    </div>
+
+</body>
+</html>`)

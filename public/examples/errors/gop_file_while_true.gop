@@ -1,0 +1,6 @@
+<!go
+
+for {
+	fmt.Println("hello world")
+}
+

@@ -1,0 +1,12 @@
+<!go
+
+func test() string {
+	return "12345"
+}
+
+func test2() string {
+	return "123456"
+}
+
+
+fmt.Println(test2())

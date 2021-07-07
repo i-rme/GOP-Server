@@ -1,0 +1,32 @@
+<!go
+
+require "../private/includes/template.gop"
+
+fmt.Println(`<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>` + _SERVER["SIGNATURE"] + `</title>
+
+    ` + TemplateStyles + `
+</head>
+
+<body>
+
+    <center>
+
+    ` + TemplateLogo + `
+
+    <h1 class="title">` + _SERVER["SIGNATURE"] + `</h1>
+
+    <br>
+    <p><a href="examples">Examples</a></p>
+    <p><a href="examples/cms/">CMS Demo</a></p>
+    <p><a href="gop-info">Gop Info</a></p>
+    <p><a href="server-status">Server Status</a></p>
+    <p><a href="license.gop">License</a></p>
+    </center>
+
+</body>
+</html>
+`)

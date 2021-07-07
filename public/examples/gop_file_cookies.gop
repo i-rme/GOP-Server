@@ -1,0 +1,14 @@
+<!go
+
+fmt.Println("<h2>This should work</h2>")
+
+fmt.Println("The value of _COOKIE[\"bob\"]: ", _COOKIE["bob"])
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _COOKIE map: ", _COOKIE)
+
+fmt.Println(`
+<p>Setting Cookies using some JavaScript...</p>
+<script>
+document.cookie = "bob=alice";
+</script>
+`)

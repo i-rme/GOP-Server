@@ -1,0 +1,15 @@
+<!go
+
+fmt.Println("<p>Lets count up to 10...")
+
+i := 1
+
+// Loop starting on 1 and ending on 10
+for i <= 10 {
+    fmt.Println("<p>"+ i +"</p>")
+    i++
+}
+
+// It does not work because the integer has to be converted into a string
+
+// More code goes here

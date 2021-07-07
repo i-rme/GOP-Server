@@ -1,0 +1,1 @@
+<!go fmt.Println("<h2>This should work</h2>")

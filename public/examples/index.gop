@@ -1,0 +1,83 @@
+<!go
+
+require "../../private/includes/template.gop"
+
+fmt.Println(`<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Examples - ` + _SERVER["SIGNATURE"] + `</title>
+
+    ` + TemplateStyles + `
+
+</head>
+<body>
+
+    <center>
+
+    ` + TemplateLogo + `
+
+    <h1 class="title">Examples</h1>
+    </center>
+    <br>
+
+    <div class="content">
+
+      <h2>Example files</h2>
+
+      <ul>
+        <li><a href="/examples/index.gop">Index</a></li>
+        <li><a href="/examples/gop_file.gop">Gop File</a></li>
+        <li><a href="/examples/gop_file_minified.gop">Gop File Minified</a></li>
+        <li><a href="/examples/gop_file_import_syntax.gop">Gop File Import Syntax</a></li>
+        <li><a href="/examples/go_file_with_functions.go">Go File With Functions</a></li>
+        <li><a href="/examples/go_file.go">Go File</a></li>
+        <li><a href="/examples/gop_file_get_parameters.gop?key=value">Gop File With GET parameters</a></li>
+        <li><a href="/examples/gop_file_post_parameters.gop">Gop File With POST parameters</a></li>
+        <li><a href="/examples/gop_file_cookies.gop">Gop File With COOKIES</a></li>
+        <li><a href="/examples/gop_file_server.gop">Gop File With SERVER variable</a></li>
+        <li><a href="/examples/gop_file_require.gop">Gop File With Require</a></li>
+        <li><a href="/examples/directorylisting">Directory Listing</a></li>
+        <li><a href="/examples/gop_file_with_included_functions.gop">Gop File with Included Functions</a></li>
+        <li><a href="/examples/gop_file_with_headers.gop">Gop File with Headers</a></li>
+        <li><a href="/examples/gop_sessions.gop">Gop Sessions</a></li>
+        <li><a href="/examples/gop_httpauth.gop">Gop HTTP Auth</a></li>
+        <li><a href="/gop-info">Gop Info</a></li>
+        <li><a href="/server-status">Server Status</a></li>
+        <li><a href="/examples/gop_file_methods.gop">Gop Methods</a></li>
+        <li><a href="/examples/gop_content_type.gop">Gop Content Type</a></li>
+        <li><a href="/api/">Gop API</a></li>
+        <li><a href="/examples/gop_unprivileged_user.gop">Gop unprivileged user</a></li>
+        <li><a href="/examples/gop_file_upload.gop">Gop file upload</a></li>
+        <li><a href="/examples/gop_file_with_functions.gop">Gop File With Functions</a></li>
+        <li><a href="/examples/cms/">Gop CMS Demo</a></li>
+        <li><a href="/examples/gop_mysql.gop">Gop MySQL</a></li>
+      </ul>
+
+      <h2>Example static files</h2>
+
+      <ul>
+        <li><a href="/examples/image.png">PNG Image</a></li>
+        <li><a href="/examples/text.txt">Plain Text</a></li>
+      </ul>
+
+      <h2>Example error files</h2>
+
+      <ul>
+        <li><a href="/examples/errors/404.gop">ERRORS: Not found gop file</a></li>
+        <li><a href="/examples/errors/404.txt">ERRORS: Not found static file</a></li>
+        <li><a href="/examples/errors/go_file_empty.go">ERRORS: Go File Empty</a></li>
+        <li><a href="/examples/errors/go_file_while_true.go">ERRORS: Go File While True</a></li>
+        <li><a href="/examples/errors/go_file_without_import.go">ERRORS: Go File Without Import</a></li>
+        <li><a href="/examples/errors/gop_file_empty.gop">ERRORS: Gop File Empty</a></li>
+        <li><a href="/examples/errors/gop_file_while_true.gop">ERRORS: Gop File While True</a></li>
+        <li><a href="/examples/errors/gop_without_import.gop">ERRORS: Gop Without Import</a></li>
+        <li><a href="/examples/errors/gop_without_tag.gop">ERRORS: Gop Without tag</a></li>
+        <li><a href="/examples/errors/gop_file_syntax_error.gop">ERRORS: Gop Syntax Error</a></li>
+      </ul>
+
+    </div>
+
+</body>
+</html>
+`)

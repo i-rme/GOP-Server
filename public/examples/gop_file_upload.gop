@@ -1,0 +1,16 @@
+<!go
+
+fmt.Println("The value of _POST[\"key\"]: ", _POST["key"])
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _POST map: ", _POST)
+fmt.Println("<br/><br/>")
+fmt.Println("The _SERVER METHOD: ", _SERVER["REQUEST_METHOD"])
+fmt.Println(`
+
+<form action="gop_file_upload.gop" method="post" enctype="multipart/form-data">
+  Select image to upload:
+  <input type="file" name="`+ _SERVER["FILE_UPLOAD_KEY"] +`">
+  <input type="submit" value="Upload Image" name="submit">
+</form>
+
+`)

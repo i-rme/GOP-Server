@@ -1,0 +1,52 @@
+<!go
+
+type user struct {
+	Id  int
+	Name string
+	Email   string
+}
+
+user1 := user{1, "Bob", "bob@mail.com"}
+
+type message struct {
+	Message   string
+}
+
+
+msg1 := message{"Unauthorized to perform admin operations"}
+msg2 := message{"I'm a teapot"}
+msg3 := message{"Unknown operation"}
+msg4 := message{"Method Not Allowed"}
+
+_header("Content-Type: application/json")
+
+operation := _SERVER["REQUEST_METHOD"] + " " + _SERVER["REQUEST_PATH"]
+
+switch operation {
+    case "GET /api/calculator":
+        _header("200")
+        fmt.Println(`{"Operation": "`+ _GET["a"] + ` + ` + _GET["b"] + `", "Result": "`+ _int_to_string(_string_to_int(_GET["a"])+_string_to_int(_GET["b"])) + `"}`)
+    case "GET /api/user":
+        _header("200")
+        fmt.Println(_json_encode(user1))
+    case "PATCH /api/user":
+        _header("405")
+        fmt.Println(_json_encode(msg4))
+    case "PUT /api/user":
+        _header("405")
+        fmt.Println(_json_encode(msg4))
+    case "POST /api/user":
+        _header("405")
+        fmt.Println(_json_encode(msg4))
+    case "DELETE /api/user":
+        _header("405")
+        fmt.Println(_json_encode(msg4))
+    case "GET /api/admin":
+        _header("401")
+        fmt.Println(_json_encode(msg1))
+    case "GET /api/teapot":
+        _header("418")
+        fmt.Println(_json_encode(msg2))
+    default:
+        fmt.Println(_json_encode(msg3))
+}

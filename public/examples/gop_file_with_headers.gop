@@ -1,0 +1,6 @@
+<!go
+
+fmt.Println("<h1>Headers test</h1>")
+
+_redirect("https://google.es/2")
+_header("X-Custom: example")

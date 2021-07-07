@@ -1,0 +1,7 @@
+<!go
+
+fmt.Println("<h2>MAIN: Before first import</h2>")
+require "dependencies/example_required1.gop"
+fmt.Println("<h2>MAIN: In the middle of two imports</h2>")
+require "dependencies/example_required2.gop"
+fmt.Println("<h2>MAIN: After second import</h2>")

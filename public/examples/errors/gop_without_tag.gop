@@ -1,0 +1,1 @@
+fmt.Println("This GOP file is missing the <!go tag")

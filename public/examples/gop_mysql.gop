@@ -1,0 +1,21 @@
+<!go
+	fmt.Println("<p>SQL TEST</p>")
+
+	db := _mysqli_connect("127.0.0.1", "DB_USER_HERE", "DB_PASSWORD_HERE", "DB_NAME_HERE")
+
+	query := _mysqli_query(db, "SELECT * FROM DB_TABLE_HERE")
+
+
+		for query.Next() {
+			
+			var id, test string
+			err := query.Scan(&id, &test)
+			if err != nil {
+				fmt.Println("<p>DB QUERY ERROR</p>")
+				fmt.Println(err.Error())
+			}
+			fmt.Println(id)
+			fmt.Println(test)
+		}
+
+	fmt.Println("<p>END SQL TEST</p>")

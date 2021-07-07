@@ -1,0 +1,13 @@
+<!go
+
+fmt.Println(_htmlentities("<h1>Escaped string</h1>"))
+
+fmt.Println(_nl2br(`
+1
+2
+3
+4`))
+
+x := 123
+
+_echo("Prueba ", "test ", x)

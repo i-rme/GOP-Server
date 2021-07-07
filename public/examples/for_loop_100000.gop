@@ -1,0 +1,12 @@
+<!go
+
+import (
+    "math/rand"
+)
+        
+
+rand := rand.Intn(10000 - 1) + 1
+
+for i := rand; i < 100000; i++ {
+    fmt.Print(i)
+}

@@ -1,0 +1,12 @@
+<!go
+
+fmt.Println("The value of _POST[\"key\"]: ", _POST["key"])
+fmt.Println("<br/><br/>")
+fmt.Println("The value of the _POST map: ", _POST)
+fmt.Println("<br/><br/>")
+fmt.Println(`
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>`)
