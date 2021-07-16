@@ -18,10 +18,10 @@ fmt.Println(`<!doctype html>
     ` + TemplateLogo + `
 
     <h1 class="title">` + _SERVER["SIGNATURE"] + `</h1>
+	<p><strong>Welcome! Create or edit some GOP scripts under the DocumentRoot directory to start (` + _SERVER["DOCUMENT_ROOT"] + `).</strong></p>
 
     <br>
     <p><a href="examples">Examples</a></p>
-    <p><a href="examples/cms/">CMS Demo</a></p>
     <p><a href="gop-info">Gop Info</a></p>
     <p><a href="server-status">Server Status</a></p>
     <p><a href="license.gop">License</a></p>
