@@ -20,9 +20,18 @@ In summary, the server allows to easily develop web applications programmed in G
 *The software has just been released an has to be considered as beta, as might contain bugs and/or security vulnerabilities. Audit the code before using it in production enviroments. The software is provided as is without warranty of any kind.*
 
 ## How to run ###
+**The steps are simple: install Golang, clone the repository and execute from source (go run).**
+
+Then, place your files under the /public directory and access them from http://localhost:80.
 
 ### Windows Prerequisites
 Install Golang from https://golang.org/doc/install
+
+Clone the repository.
+
+Edit the configuration if needed (config/configuration.json)
+
+Open a terminal inside the GOP-Server folder.
 
 ### Linux Prerequisites
 ```
@@ -31,7 +40,7 @@ sudo apt install golang
 ```
 ```
 git clone https://github.com/i-rme/GOP-Server.git
-cd pfg
+cd GOP-Server
 nano config/configuration.json
 ```
 
@@ -61,6 +70,10 @@ Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the conf
 **CMS Example database details**: `./public/examples/cms/components/repository.gop`
 
 ## Troubleshooting
+**Error**: *CreateFile src/main.go: The system cannot find the path specified.* when launching the GOP Server with go run.
+
+**Solution**: Navigate to the GOP-Server directory before launching. ```cd GOP-Server```
+
 **Error**: "*no required module provides package*" when MySQL support is enabled.
 
 **Solution**: Install the missing package using ```go get github.com/go-sql-driver/mysql```
