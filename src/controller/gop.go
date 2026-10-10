@@ -24,11 +24,15 @@ func RunGop(urlPath, parameters string) (string, string, int, string) {
 	if cacheFile == "" { //File not cached
 		logs.WriteDebug("The file is not on the cache. Building...")
 
-		source, valid := parser.Process(sourcePath)
-		if !valid {
-			return errors.Render(errors.BuildFailedParsing, sourcePath), "[]", http.StatusInternalServerError, "MISS"
+		program, err := parser.Process(sourcePath, parser.Options{
+			MySQL:             config.MySQLSupportEnabled,
+			SessionCookieName: config.SessionCookieName,
+			HeadersSeparator:  config.GopHeadersSeparator,
+		})
+		if err != nil {
+			return errors.Render(errors.BuildFailedParsing, err.Error()), "[]", http.StatusInternalServerError, "MISS"
 		}
-		tempFilePath := filesystem.WriteTemp(config.CacheRoot, source)
+		tempFilePath := filesystem.WriteTemp(config.CacheRoot, program.Source)
 
 		combinedOutput, workingDirectory, buildOk := worker.BuildAndRun(tempFilePath, parameters)
 
@@ -44,7 +48,7 @@ func RunGop(urlPath, parameters string) (string, string, int, string) {
 		cache.Put(sourcePath, workingDirectory, tempFilePath)
 		filesystem.Remove(tempFilePath)
 
-		buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput)
+		buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput, config.GopHeadersSeparator)
 
 		return buildOutput, headersOutput, http.StatusOK, "MISS"
 
@@ -57,7 +61,7 @@ func RunGop(urlPath, parameters string) (string, string, int, string) {
 		return errors.Render(errors.RunFailedGopFatal, combinedOutput), "[]", http.StatusInternalServerError, "MISS"
 	}
 
-	buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput)
+	buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput, config.GopHeadersSeparator)
 	return buildOutput, headersOutput, http.StatusOK, "HIT"
 
 }

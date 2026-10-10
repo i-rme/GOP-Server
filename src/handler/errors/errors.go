@@ -47,7 +47,7 @@ func Render(errorCode int, details string) string {
 		subtitle = details + "\n\nTry disabling RunScriptsAsNobody in the configuration."
 	case BuildFailedParsing:
 		title = "There was an error in your .gop source"
-		subtitle = "Gop files and dependencies have to start with the <!go tag"
+		subtitle = details
 	default:
 		title = "Unexpected error"
 		subtitle = "Oops"

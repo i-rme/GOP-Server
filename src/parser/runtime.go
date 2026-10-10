@@ -1,9 +1,33 @@
-package parser
+//go:build ignore
 
-import "pfg/src/server/config"
+// The runtime of every .gop script. The parser embeds this file and adds it to the
+// generated program, together with __sessionCookieName and __headersSeparator.
 
-var publicFunctions = `
-//Public Methods
+package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"html"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// Public Variables
+var _GET, _POST, _COOKIE, _SERVER, _SESSION, _HEADER map[string]string
+
+// Private Variables
+var __sessionActive = false
+var __responseHeader = make([]string, 0)
+
+var _ = os.Hostname // Dummy assignment to avoid os import not used
+
+// Public Methods
 func _htmlentities(input string) string {
 	return html.EscapeString(input)
 }
@@ -80,7 +104,7 @@ func _int_to_string(input int) string {
 	return string
 }
 func _isset(input string) bool {
-	if(input == ""){
+	if input == "" {
 		return false
 	}
 	return true
@@ -92,23 +116,21 @@ func _date(format string) string {
 func _time(format string) string {
 	return _date(format)
 }
-func substr(string string, start, end int) string{
-	if(start < 0){
+func substr(string string, start, end int) string {
+	if start < 0 {
 		start = 0
 	}
-	if(end > len(string)){
+	if end > len(string) {
 		end = len(string)
 	}
 	return string[start:end]
 }
-`
 
-var privateFunctions = `
-//Private Methods
+// Private Methods
 func __session_call() {
 	if __sessionActive {
 		sessionJSON, _ := json.Marshal(_SESSION) //Parse SESSION map as a JSON byte[]
-		_setcookie("` + config.SessionCookieName + `", base64.StdEncoding.EncodeToString(sessionJSON))
+		_setcookie(__sessionCookieName, base64.StdEncoding.EncodeToString(sessionJSON))
 	}
 }
 func __housekeeping() {
@@ -120,7 +142,7 @@ func __housekeeping() {
 	var hasContentType = false
 
 	for i := range __responseHeader {
-		if strings.HasPrefix(__responseHeader[i], "Content-Type"){
+		if strings.HasPrefix(__responseHeader[i], "Content-Type") {
 			hasContentType = true
 			break
 		}
@@ -132,10 +154,10 @@ func __housekeeping() {
 
 	// Required to pass headers to the controller
 	_headersJSON, _ := json.Marshal(__responseHeader)
-	fmt.Println("` + config.GopHeadersSeparator + `", string(_headersJSON))
+	fmt.Println(__headersSeparator, string(_headersJSON))
 }
 
-//TO-DO Move it
+// TO-DO Move it
 func extractBasicAuthHeader(input string) string {
 	r := regexp.MustCompile("Basic (.*)") // Matches Basic Auth Base64
 	match := r.FindStringSubmatch(input)
@@ -156,38 +178,22 @@ func splitByColon(input string) (string, string) {
 
 	return match[1], match[2]
 }
-`
 
-var mysqlFunctions = `
-//Public MySQL Methods
-func _mysqli_connect(host, user, password, database string) *sql.DB {
-	connection, err := sql.Open("mysql", user+":"+password+"@tcp("+host+":3306)/"+database+"?timeout=2s")
+func init() {
 
-	if err != nil {
-		fmt.Println("DB CONNECTION ERROR")
-		fmt.Println(err.Error())
+	parametersJSON := flag.String("PARAMETERS", "[]", "parameters") // Receives the PARAMETERS values as JSON in a launch flag
+	flag.Parse()
 
-		__housekeeping()
-		os.Exit(0)
+	var parameters []map[string]string           // Prepares the slice of maps variable containing all the parameters
+	parametersBytes := []byte(*parametersJSON)   // JSON string to byte array
+	json.Unmarshal(parametersBytes, &parameters) // JSON to slice of maps
+
+	if len(parameters) > 0 { // Avoid crashing if parameters are not passed
+		_GET = parameters[0]
+		_POST = parameters[1]
+		_COOKIE = parameters[2]
+		_SERVER = parameters[3]
+		_SESSION = parameters[4]
+		_HEADER = parameters[5]
 	}
-
-	return connection
 }
-
-func _mysqli_query(connection *sql.DB, query string) *sql.Rows {
-	result, err := connection.Query(query)
-
-	//if ( err != nil && strings.HasPrefix(err.Error(), "dial") ) {	// Only crash if database is down, not if there is a query error
-
-	if err != nil {
-		fmt.Println("DB QUERY ERROR")
-		fmt.Println(err)
-
-		__housekeeping()
-		os.Exit(0)
-	}
-
-	return result
-
-}
-`

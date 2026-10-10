@@ -1,57 +1,89 @@
 package parser
 
+import (
+	_ "embed"
+	goparser "go/parser"
+	"go/token"
+	"strconv"
+	"strings"
+)
+
 /*
-	Glue.go defines variables used by parser.AddContext
-	to form a valid go file from gop source adding middleware
-	to provide extra functionality
+	glue.go loads the runtime wrapped around every script. The runtime is
+	plain Go in runtime.go and runtime_mysql.go, embedded here and kept out
+	of the server build by their build constraint.
 */
 
-// PackageDefinition Required to start a valid go file
-var PackageDefinition = "package main\r\n"
+//go:embed runtime.go
+var runtimeSource string
 
-// ImportsDefinition Required to receive and parse GET parameters
-var ImportsDefinition = `
-import "flag"
-import "encoding/json"
-import "html"
-import "strings"
-import "encoding/base64"
-import "strconv"
-import "regexp"
-import "fmt"
-import "time"
-import "os"
-`
+//go:embed runtime_mysql.go
+var runtimeMySQLSource string
 
-// ImportsDefinitionMySQL Required to support MySQL queries
-var ImportsDefinitionMySQL = `
-import "database/sql"
-import _ "github.com/go-sql-driver/mysql"
-`
+// runtimeFile is an embedded runtime file split into its imports and the code after them
+type runtimeFile struct {
+	name    string
+	imports []importSpec
+	code    string // starts at the beginning of a line
+	line    int    // line of code in the file
+}
 
-// VariablesDefinition defines variables
-var VariablesDefinition = `
-// Public Variables
-var _GET, _POST, _COOKIE, _SERVER, _SESSION, _HEADER map[string]string
+var runtimeFiles = [...]runtimeFile{
+	splitRuntime("runtime.go", runtimeSource),
+	splitRuntime("runtime_mysql.go", runtimeMySQLSource),
+}
 
-// Private Variables
-var __sessionActive = false
-var __responseHeader = make([]string, 0)
+func splitRuntime(name, src string) runtimeFile {
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, name, src, goparser.ImportsOnly)
+	if err != nil {
+		panic(err) // the embedded runtime is part of the build; its tests compile it
+	}
 
-var _ = os.Hostname	// Dummy assignment to avoid os import not used
-`
+	runtime := runtimeFile{name: name}
+	for _, spec := range file.Imports {
+		path, _ := strconv.Unquote(spec.Path.Value)
+		imported := importSpec{path: path}
+		if spec.Name != nil {
+			imported.name = spec.Name.Name
+		}
+		runtime.imports = append(runtime.imports, imported)
+	}
 
-// MainFunction Required to wrap the code to be run
-var MainFunction = "\r\nfunc main() {"
+	end := fset.Position(file.Decls[len(file.Decls)-1].End()) // only imports are parsed
+	start := end.Offset + strings.IndexByte(src[end.Offset:], '\n') + 1
+	runtime.code = src[start:]
+	runtime.line = end.Line + 1
+	return runtime
+}
 
-// MainFunctionEnd Required to wrap the code to be run
-// Headers required to allow redirections and custom headers
-var MainFunctionEnd = "\r\n" +
-	"__housekeeping()" + "\r\n" +
-	"\r\n}\r\n"
+// runtimeFor returns the runtime files a script needs
+func runtimeFor(options Options) []runtimeFile {
+	if options.MySQL {
+		return runtimeFiles[:]
+	}
+	return runtimeFiles[:1]
+}
 
-// FunctionsDefinition defines custom functions
-var FunctionsDefinition = publicFunctions + privateFunctions + middlewareFunction
+// runtimeImports are the packages the runtime imports, which scripts can also use without importing them
+func runtimeImports(options Options) []importSpec {
+	var imports []importSpec
+	seen := make(map[importSpec]bool)
+	for _, runtime := range runtimeFor(options) {
+		for _, spec := range runtime.imports {
+			if !seen[spec] {
+				seen[spec] = true
+				imports = append(imports, spec)
+			}
+		}
+	}
+	return imports
+}
 
-// FunctionsDefinitionMySQL defines custom functions
-var FunctionsDefinitionMySQL = mysqlFunctions
+// runtimeConstants are the server settings the runtime reads
+func runtimeConstants(options Options) string {
+	return "const (\n" +
+		"\t__sessionCookieName = " + strconv.Quote(options.SessionCookieName) + "\n" +
+		"\t__headersSeparator  = " + strconv.Quote(options.HeadersSeparator) + "\n" +
+		")\n"
+}
