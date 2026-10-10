@@ -28,6 +28,8 @@ type Handler struct {
 	limiter    *rateLimiter
 	sessions   sessions
 	uploadKey  []byte
+	root       string // DocumentRoot as filesystem.RealDir returns it
+	workDir    string // the server's working directory, which scripts see in _SERVER
 
 	// Scripts named in the configuration, resolved once; they may live outside the document root
 	listingScript, deniedScript, rateLimitedScript script
@@ -51,6 +53,14 @@ func New(c *config.Config, log *slog.Logger, stats *logs.Stats) (*Handler, error
 	if err != nil {
 		return nil, err
 	}
+	root, err := filesystem.RealDir(c.DocumentRoot)
+	if err != nil {
+		return nil, err
+	}
+	workDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
 	h := &Handler{
 		config:     c,
 		log:        log,
@@ -59,6 +69,8 @@ func New(c *config.Config, log *slog.Logger, stats *logs.Stats) (*Handler, error
 		limiter:    newRateLimiter(c.RateLimitRate, time.Duration(c.RateLimitPeriod)*time.Second),
 		sessions:   sessions{name: c.SessionCookieName, key: c.Key("session")},
 		uploadKey:  c.Key("upload"),
+		root:       root,
+		workDir:    workDir,
 	}
 
 	configured := []struct {
@@ -113,7 +125,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	urlPath := strings.TrimPrefix(r.URL.Path, "/")
-	path, err := filesystem.ResolveInRoot(h.config.DocumentRoot, urlPath)
+	path, err := filesystem.ResolveInRoot(h.root, urlPath)
 	if err != nil {
 		h.notFound(w, urlPath)
 		return

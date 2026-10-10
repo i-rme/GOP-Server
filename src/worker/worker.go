@@ -81,7 +81,8 @@ func (w *Worker) Build(dir, binary string, files map[string]string, main string)
 	}
 
 	partial := binary + ".partial"
-	_, stderr, err := w.exec(dir, w.buildEnv, w.options.BuildTimeout, "go", "build", "-o", partial, main)
+	// -s -w leaves out the symbol table and DWARF, which panics do not need and which make linking slower
+	_, stderr, err := w.exec(dir, w.buildEnv, w.options.BuildTimeout, "go", "build", "-ldflags=-s -w", "-o", partial, main)
 	var exit *exec.ExitError
 	if errors.As(err, &exit) {
 		return &BuildError{Output: err.Error() + "\n" + strings.TrimSuffix(w.relative(dir, stderr), "\n")}

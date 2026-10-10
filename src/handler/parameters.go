@@ -70,7 +70,6 @@ func first(values map[string][]string) map[string]string {
 
 // server builds the _SERVER map for a script answering urlPath
 func (h *Handler) server(r *http.Request, urlPath string) map[string]string {
-	workDir, _ := os.Getwd()
 	ip, port, _ := net.SplitHostPort(r.RemoteAddr)
 	requestURI, _ := url.Parse(r.RequestURI)
 
@@ -88,13 +87,13 @@ func (h *Handler) server(r *http.Request, urlPath string) map[string]string {
 
 	documentRoot := h.config.DocumentRoot
 	if !filepath.IsAbs(documentRoot) {
-		documentRoot = join(workDir, documentRoot)
+		documentRoot = join(h.workDir, documentRoot)
 	}
 
 	return map[string]string{
 		"DOCUMENT_ROOT":          documentRoot,
 		"SCRIPT_PATH":            join(documentRoot, scriptDir),
-		"CURRENT_PATH":           workDir,
+		"CURRENT_PATH":           h.workDir,
 		"DOCUMENT_ROOT_RELATIVE": h.config.DocumentRoot,
 		"SCRIPT_PATH_RELATIVE":   "/" + scriptDir,
 		"GOP_SELF":               urlPath,
