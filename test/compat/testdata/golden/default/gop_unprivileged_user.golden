@@ -1,0 +1,14 @@
+=== GET /examples/gop_unprivileged_user.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+{{USERNAME}}
+=== GET /examples/gop_unprivileged_user.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{{USERNAME}}

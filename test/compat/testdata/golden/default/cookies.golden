@@ -1,0 +1,33 @@
+=== GET /examples/gop_file_cookies.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>This should work</h2>
+The value of _COOKIE["bob"]:  
+<br/><br/>
+The value of the _COOKIE map:  map[]
+
+<p>Setting Cookies using some JavaScript...</p>
+<script>
+document.cookie = "bob=alice";
+</script>
+
+=== GET /examples/gop_file_cookies.gop
+> Cookie: bob=alice; theme=dark
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This should work</h2>
+The value of _COOKIE["bob"]:  alice
+<br/><br/>
+The value of the _COOKIE map:  map[bob:alice theme:dark]
+
+<p>Setting Cookies using some JavaScript...</p>
+<script>
+document.cookie = "bob=alice";
+</script>
+

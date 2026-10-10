@@ -1,0 +1,26 @@
+=== GET /examples/gop_file_require.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>MAIN: Before first import</h2>
+<h2>This line comes from the required file 1 (example_required1.gop)</h2>
+<h2>MAIN: In the middle of two imports</h2>
+<h2>This line comes from the required file 2 (example_required2.gop)</h2>
+<h2>This line comes from the required file 3 (example_required3.gop)</h2>
+<h2>This line comes from the required file 4 (example_required4.gop)</h2>
+<h2>MAIN: After second import</h2>
+=== GET /examples/gop_file_require.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>MAIN: Before first import</h2>
+<h2>This line comes from the required file 1 (example_required1.gop)</h2>
+<h2>MAIN: In the middle of two imports</h2>
+<h2>This line comes from the required file 2 (example_required2.gop)</h2>
+<h2>This line comes from the required file 3 (example_required3.gop)</h2>
+<h2>This line comes from the required file 4 (example_required4.gop)</h2>
+<h2>MAIN: After second import</h2>

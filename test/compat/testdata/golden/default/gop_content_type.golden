@@ -1,0 +1,14 @@
+=== GET /examples/gop_content_type.gop
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>Content Type</h2>
+=== GET /examples/gop_content_type.gop
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>Content Type</h2>

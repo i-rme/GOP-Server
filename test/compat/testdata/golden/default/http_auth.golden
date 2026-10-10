@@ -1,0 +1,28 @@
+=== GET /examples/gop_httpauth.gop
+--- 401
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Www-Authenticate: Basic realm="Private Gop Server"
+X-Cache-Status: MISS
+
+<h2>Authentication required</h2>
+<h3>No auth was provided</h3>
+=== GET /examples/gop_httpauth.gop
+> Authorization: Basic Ym9iOndyb25n
+--- 401
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Www-Authenticate: Basic realm="Private Gop Server"
+X-Cache-Status: HIT
+
+<h2>Authentication required</h2>
+<h3>Bad user/pass</h3>
+=== GET /examples/gop_httpauth.gop
+> Authorization: Basic Ym9iOjEyMzQ=
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>HTTP Auth Successful</h2>
+bob 1234

@@ -1,0 +1,34 @@
+=== GET /examples/text.txt
+--- 200
+Accept-Ranges: bytes
+Content-Type: text/plain; charset=utf-8
+Last-Modified: {{HTTP-DATE}}
+Server: Golang Preprocessor for Web Services v1.0
+
+plain text file
+\ no newline at end of body
+=== GET /examples/image.png
+--- 200
+Accept-Ranges: bytes
+Content-Type: image/png
+Last-Modified: {{HTTP-DATE}}
+Server: Golang Preprocessor for Web Services v1.0
+
+[binary body: 2790 bytes, sha256 cf7c68ec8d0befa21ab678a8b368a3ff51fb5062e0732f6e06724aa091e83618]
+=== GET /favicon.ico
+--- 200
+Accept-Ranges: bytes
+Content-Type: image/vnd.microsoft.icon
+Last-Modified: {{HTTP-DATE}}
+Server: Golang Preprocessor for Web Services v1.0
+
+[binary body: 1150 bytes, sha256 580ac91a142dfe6a3d2d428b54a405518f60481733818b1c643e65f135b69c10]
+=== GET /examples/directorylisting/info.txt
+--- 200
+Accept-Ranges: bytes
+Content-Type: text/plain; charset=utf-8
+Last-Modified: {{HTTP-DATE}}
+Server: Golang Preprocessor for Web Services v1.0
+
+This directory has no index, so directory listing happens.
+\ no newline at end of body

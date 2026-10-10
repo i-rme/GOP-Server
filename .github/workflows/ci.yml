@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Compiler error pages are part of the golden files, so pin the minor version.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+
+      - name: go vet
+        run: |
+          go vet ./src/...
+          cd test/compat && go vet ./...
+
+      - name: Build server
+        run: go build -o bin/gop-server ./src
+
+      - name: Build compat suite
+        working-directory: test/compat
+        run: go test -c -o compat.test .
+
+      # The current server creates its cache directory with mode 0666, which only
+      # root can write into, so the suite runs as root (as the README's sudo does).
+      - name: Compat suite
+        working-directory: test/compat
+        run: |
+          sudo env "PATH=$PATH" \
+            GOP_SERVER_BIN="$GITHUB_WORKSPACE/bin/gop-server" \
+            GOP_COMPAT_OUT="$RUNNER_TEMP/compat-actual" \
+            ./compat.test -test.v -test.count=1
+
+      - name: Upload actual responses
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-actual
+          path: ${{ runner.temp }}/compat-actual
+          if-no-files-found: ignore

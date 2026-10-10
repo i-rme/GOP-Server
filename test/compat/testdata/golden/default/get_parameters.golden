@@ -1,0 +1,37 @@
+=== GET /examples/gop_file_get_parameters.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+The value of _GET["key"]:  
+<br/><br/>
+The value of the _GET map:  map[]
+=== GET /examples/gop_file_get_parameters.gop?key=value
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _GET["key"]:  value
+<br/><br/>
+The value of the _GET map:  map[key:value]
+=== GET /examples/gop_file_get_parameters.gop?key=first&key=second&empty=&space=hello%20world&amp=a%26b
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _GET["key"]:  first
+<br/><br/>
+The value of the _GET map:  map[amp:a&b empty: key:first space:hello world]
+=== POST /examples/gop_file_get_parameters.gop?q=1
+> [form] key=posted
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _GET["key"]:  posted
+<br/><br/>
+The value of the _GET map:  map[key:posted q:1]

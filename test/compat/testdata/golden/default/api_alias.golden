@@ -1,0 +1,77 @@
+=== GET /examples/gop_api.gop
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+{"Message":"Unknown operation"}
+=== GET /api/
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Unknown operation"}
+=== GET /api/calculator?a=2&b=40
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Operation": "2 + 40", "Result": "42"}
+=== GET /api/user
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Id":1,"Name":"Bob","Email":"bob@mail.com"}
+=== POST /api/user
+--- 405
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Method Not Allowed"}
+=== PUT /api/user
+--- 405
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Method Not Allowed"}
+=== PATCH /api/user
+--- 405
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Method Not Allowed"}
+=== DELETE /api/user
+--- 405
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Method Not Allowed"}
+=== GET /api/admin
+--- 401
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Unauthorized to perform admin operations"}
+=== GET /api/teapot
+--- 418
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"I'm a teapot"}
+=== GET /api/unknown
+--- 200
+Content-Type: application/json
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{"Message":"Unknown operation"}

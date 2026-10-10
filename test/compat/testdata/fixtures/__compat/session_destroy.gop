@@ -1,0 +1,7 @@
+<!go
+
+_session_start()
+fmt.Println("before:", _SESSION)
+_session_destroy()
+_setsession("only", "this")
+fmt.Println("after:", _SESSION)

@@ -1,0 +1,16 @@
+=== GET /page.go
+--- 200
+Content-Type: text/html; charset=utf-8
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h1>This is a page.go</h1><a href="/">index</a>
+\ no newline at end of body
+=== GET /page.go
+--- 200
+Content-Type: text/html; charset=utf-8
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h1>This is a page.go</h1><a href="/">index</a>
+\ no newline at end of body

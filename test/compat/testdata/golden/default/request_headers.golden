@@ -1,0 +1,12 @@
+=== GET /__compat/headers.gop
+> Accept: text/html
+> Cookie: a=1; b=2
+> X-Custom-Header: custom value
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+_HEADER: map[Accept:text/html Connection:close Cookie:a=1; b=2 User-Agent:gop-compat/1 X-Custom-Header:custom value]
+X-Custom-Header: custom value
+_COOKIE: map[a:1 b:2]
