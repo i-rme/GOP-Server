@@ -1,7 +1,7 @@
 //go:build ignore
 
 // The runtime of every .gop script. The parser embeds this file and adds it to the
-// generated program, together with __sessionCookieName and __headersSeparator.
+// generated program, together with __headersSeparator.
 
 package main
 
@@ -68,6 +68,7 @@ func _setsession(name, value string) {
 }
 func _session_destroy() {
 	_SESSION = make(map[string]string)
+	__sessionActive = true // an empty session tells the server to expire the cookie
 }
 func _base64_encode(plain string) string {
 	encoded := base64.StdEncoding.EncodeToString([]byte(plain))
@@ -131,22 +132,23 @@ func substr(string string, start, end int) string {
 }
 
 // Private Methods
-func __session_call() {
-	if __sessionActive {
-		sessionJSON, _ := json.Marshal(_SESSION) //Parse SESSION map as a JSON byte[]
-		_setcookie(__sessionCookieName, base64.StdEncoding.EncodeToString(sessionJSON))
-	}
-}
 
 // __housekeeping ends the output with the trailer the server reads the response from:
-// the separator, a space and {"status":N,"headers":[[name,value],...]} on one line
+// the separator, a space and {"status":N,"headers":[[name,value],...],"session":{...}} on one line.
+// The session is null unless the script started or destroyed one; the server signs it into the cookie.
 func __housekeeping() {
-	__session_call()
-
+	var session map[string]string
+	if __sessionActive {
+		session = _SESSION
+		if session == nil {
+			session = map[string]string{}
+		}
+	}
 	trailer, _ := json.Marshal(struct {
-		Status  int         `json:"status"`
-		Headers [][2]string `json:"headers"`
-	}{__status, __headers})
+		Status  int               `json:"status"`
+		Headers [][2]string       `json:"headers"`
+		Session map[string]string `json:"session"`
+	}{__status, __headers, session})
 	fmt.Fprintln(os.Stdout, __headersSeparator, string(trailer))
 }
 

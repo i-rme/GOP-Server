@@ -268,10 +268,11 @@ func TestSplitOutput(t *testing.T) {
 		in, output string
 		trailer    *Trailer
 	}{
-		{"hello\n" + trailer, "hello\n", &Trailer{404, [][2]string{{"X", "1"}}}},
+		{"hello\n" + trailer, "hello\n", &Trailer{Status: 404, Headers: [][2]string{{"X", "1"}}}},
 		{"exited early", "exited early", nil},
-		{"fake " + sep + " {}\n" + trailer, "fake " + sep + " {}\n", &Trailer{404, [][2]string{{"X", "1"}}}},
+		{"fake " + sep + " {}\n" + trailer, "fake " + sep + " {}\n", &Trailer{Status: 404, Headers: [][2]string{{"X", "1"}}}},
 		{"broken\n" + sep + " {", "broken\n" + sep + " {", nil},
+		{"s" + sep + ` {"status":0,"headers":[],"session":{"a":"1"}}`, "s", &Trailer{Headers: [][2]string{}, Session: map[string]string{"a": "1"}}},
 	}
 	for _, test := range tests {
 		output, trailer := SplitOutput(test.in, sep)

@@ -14,7 +14,6 @@ import (
 	pages "github.com/i-rme/gop-server/src/handler/errors"
 	"github.com/i-rme/gop-server/src/parser"
 	"github.com/i-rme/gop-server/src/repository/cache"
-	"github.com/i-rme/gop-server/src/repository/filesystem"
 	"github.com/i-rme/gop-server/src/server/config"
 	"github.com/i-rme/gop-server/src/worker"
 )
@@ -25,6 +24,8 @@ type Response struct {
 	Header [][2]string // set by the script, in order
 	Body   string
 	Cache  string // X-Cache-Status: HIT when the script was already built
+
+	Session map[string]string // the session to store, nil to leave the cookie alone
 }
 
 // Controller builds, caches and runs scripts
@@ -53,40 +54,25 @@ func New(c *config.Config, log *slog.Logger) (*Controller, error) {
 	return &Controller{config: c, log: log, cache: cache.New(cacheRoot), worker: w}, nil
 }
 
-// RunGop runs a .gop script
-func (c *Controller) RunGop(urlPath, parameters string) Response {
-	path := filepath.Join(c.config.DocumentRoot, urlPath)
-	if !filesystem.Exists(path) {
-		return c.fail(http.StatusNotFound, pages.NotFound, urlPath)
+// Run builds and runs the script at path, a .gop script or a standalone .go program.
+// name identifies it in error pages.
+func (c *Controller) Run(path, name, parameters string) Response {
+	if filepath.Ext(path) == ".go" {
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return c.fail(http.StatusNotFound, pages.NotFound, name)
+		}
+		return c.run(name, parser.Plain(path, src), parameters, false)
 	}
+
 	program, err := parser.Process(path, parser.Options{
-		MySQL:             c.config.MySQLSupportEnabled,
-		SessionCookieName: c.config.SessionCookieName,
-		HeadersSeparator:  c.config.GopHeadersSeparator,
+		MySQL:            c.config.MySQLSupportEnabled,
+		HeadersSeparator: c.config.GopHeadersSeparator,
 	})
 	if err != nil {
 		return c.fail(http.StatusInternalServerError, pages.BuildFailedParsing, err.Error())
 	}
-	return c.run(urlPath, program, parameters, true)
-}
-
-// RunGo runs a standalone .go program
-func (c *Controller) RunGo(urlPath, parameters string) Response {
-	path := filepath.Join(c.config.DocumentRoot, urlPath)
-	src, err := os.ReadFile(path)
-	if err != nil {
-		return c.fail(http.StatusNotFound, pages.NotFound, urlPath)
-	}
-	return c.run(urlPath, parser.Plain(path, src), parameters, false)
-}
-
-// RunIndex runs a directory's index.gop, or the directory listing script when it has none
-func (c *Controller) RunIndex(urlPath, parameters string) Response {
-	directory := filepath.Join(c.config.DocumentRoot, urlPath)
-	if !filesystem.Exists(filepath.Join(directory, "index.gop")) && filesystem.DirectoryExists(directory) {
-		return c.RunGop(c.config.DirectoryListingScript, parameters)
-	}
-	return c.RunGop(urlPath+"/index.gop", parameters)
+	return c.run(name, program, parameters, true)
 }
 
 // run builds program unless it is cached, then runs it; gop selects the .gop pages and trailer
@@ -142,6 +128,7 @@ func (c *Controller) run(urlPath string, program *parser.Program, parameters str
 		response.Status = trailer.Status
 	}
 	response.Header = trailer.Headers
+	response.Session = trailer.Session
 	if !slices.ContainsFunc(response.Header, func(h [2]string) bool { return strings.EqualFold(h[0], "Content-Type") }) {
 		response.Header = append(response.Header, [2]string{"Content-Type", "text/html"})
 	}

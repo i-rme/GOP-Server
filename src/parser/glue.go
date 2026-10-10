@@ -82,8 +82,5 @@ func runtimeImports(options Options) []importSpec {
 
 // runtimeConstants are the server settings the runtime reads
 func runtimeConstants(options Options) string {
-	return "const (\n" +
-		"\t__sessionCookieName = " + strconv.Quote(options.SessionCookieName) + "\n" +
-		"\t__headersSeparator  = " + strconv.Quote(options.HeadersSeparator) + "\n" +
-		")\n"
+	return "const __headersSeparator = " + strconv.Quote(options.HeadersSeparator) + "\n"
 }

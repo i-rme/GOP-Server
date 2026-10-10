@@ -1,182 +1,168 @@
 package handler
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
-
-	"github.com/i-rme/gop-server/src/repository/filesystem"
 )
 
-// parameters extracts GET, POST & Cookie parameters from a request, then returns them as JSON
-func (h *Handler) parameters(r *http.Request) string {
-	r.ParseForm() //ParseForm populates r.Form and r.PostForm. (GET and POST parameters)
+// maxUpload is the largest file a script accepts through FILE_UPLOAD_KEY
+const maxUpload = 1 << 20
 
-	GET := parseGET(r) //TO-DO Remove POST parameters from GET, as both are included
-	POST := parsePOST(r)
-	COOKIE := parseCOOKIE(r)
-	SERVER := h.parseSERVER(r)
-	SESSION := h.parseSESSION(r)
-	HEADER := parseHEADER(r)
+// maxMemory is how much of a multipart body is kept in memory; the rest goes to temporary files
+const maxMemory = 1 << 20
 
-	h.parseMULTIPARTS(r)
-
-	parameters := []map[string]string{GET, POST, COOKIE, SERVER, SESSION, HEADER}
-	parametersJSON, _ := json.Marshal(parameters) //Parse GET map as a JSON byte[]
-
-	return string(parametersJSON)
-}
-
-// parseGET extracts GET parameters from a request, then returns them as map
-func parseGET(r *http.Request) map[string]string {
-
-	_map := make(map[string]string) // Creating empty map
-
-	for key, value := range r.Form { //Converts map[string][]string to map[string]string
-		_map[key] = value[0]
+// parameters returns what the script gets in -PARAMETERS: the JSON list
+// [_GET, _POST, _COOKIE, _SERVER, _SESSION, _HEADER]. urlPath is the script's URL path.
+// A file sent under FILE_UPLOAD_KEY is saved to UploadsRoot on the way.
+func (h *Handler) parameters(r *http.Request, urlPath string) (string, error) {
+	if err := parseBody(r); err != nil {
+		return "", err
 	}
+	h.saveUpload(r, urlPath)
 
-	return _map
-}
-
-// parsePOST extracts POST parameters from a request, then returns them as map
-func parsePOST(r *http.Request) map[string]string {
-
-	_map := make(map[string]string) // Creating empty map
-
-	for key, value := range r.PostForm { //Converts map[string][]string to map[string]string
-		_map[key] = value[0]
-	}
-
-	return _map
-}
-
-// parseCOOKIE extracts Cookies from a request, then returns them as map
-func parseCOOKIE(r *http.Request) map[string]string {
-
-	_map := make(map[string]string) // Creating empty map
-
+	cookies := make(map[string]string)
 	for _, cookie := range r.Cookies() {
-		_map[cookie.Name] = cookie.Value
+		cookies[cookie.Name] = cookie.Value
 	}
 
-	return _map
+	parameters, err := json.Marshal([]map[string]string{
+		first(r.URL.Query()),
+		first(r.PostForm),
+		cookies,
+		h.server(r, urlPath),
+		h.sessions.read(r),
+		first(r.Header),
+	})
+	return string(parameters), err
 }
 
-// parseSERVER prepares SERVER parameters, then returns them as JSON
-func (h *Handler) parseSERVER(r *http.Request) map[string]string {
-
-	_map := make(map[string]string) // Creating empty map
-
-	currentPath, _ := os.Getwd() //rooted path name corresponding to the current directory
-
-	parsedURI, _ := url.Parse(r.RequestURI) // Parses URI and extracts path, rawquery and query values
-
-	ip, port, _ := net.SplitHostPort(r.RemoteAddr) // Removes the port from the IP
-
-	if runtime.GOOS == "windows" { //Reverse slashes if Windows is detected
-		_map["DOCUMENT_ROOT"] = currentPath + "\\" + h.config.DocumentRoot
-		_map["SCRIPT_PATH"] = currentPath + "\\" + h.config.DocumentRoot + "\\" + filesystem.Directory(urlPath(r))
-		_map["CURRENT_PATH"] = currentPath
-	} else {
-		_map["DOCUMENT_ROOT"] = currentPath + "/" + h.config.DocumentRoot
-		_map["SCRIPT_PATH"] = currentPath + "/" + h.config.DocumentRoot + "/" + filesystem.Directory(urlPath(r))
-		_map["CURRENT_PATH"] = "/" + currentPath
+// parseBody parses a urlencoded or multipart body into r.PostForm
+func parseBody(r *http.Request) error {
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if mediaType == "multipart/form-data" {
+		return r.ParseMultipartForm(maxMemory)
 	}
-
-	_map["DOCUMENT_ROOT_RELATIVE"] = h.config.DocumentRoot
-	_map["SCRIPT_PATH_RELATIVE"] = "/" + filesystem.Directory(urlPath(r))
-	_map["GOP_SELF"] = urlPath(r)
-	_map["HTTP_REFERER"] = r.Referer()
-	_map["HTTP_USER_AGENT"] = r.UserAgent()
-	_map["REMOTE_ADDR"] = ip
-	_map["REMOTE_PORT"] = port
-	_map["REQUEST_METHOD"] = r.Method
-	_map["SCRIPT_NAME"] = urlPath(r)
-	_map["SCRIPT_BASENAME"] = filepath.Base(urlPath(r))
-	_map["SERVER_NAME"] = r.Host
-	_map["SERVER_PROTOCOL"] = r.Proto
-	_map["REQUEST_URI"] = parsedURI.String()
-	_map["REQUEST_PATH"] = parsedURI.Path
-	_map["RAW_QUERY"] = parsedURI.RawQuery
-	_map["FILE_UPLOAD_KEY"] = h.fileUploadKey(r)
-	_map["SIGNATURE"] = h.config.ServerSignature
-	_map["SESSION_COOKIE_NAME"] = h.config.SessionCookieName
-	_map["LOGGING_LEVEL"] = h.config.LoggingLevel
-
-	return _map
+	return r.ParseForm()
 }
 
-// parseSESSION prepares SERVER parameters, then returns them as JSON
-func (h *Handler) parseSESSION(r *http.Request) map[string]string {
-
-	var SESSION = make(map[string]string) // Prepares the slice of maps variable containing all the parameters
-
-	for _, cookie := range r.Cookies() {
-		if cookie.Name == h.config.SessionCookieName {
-			sessionEncoded := cookie.Value
-			sessionJSON, _ := base64.StdEncoding.DecodeString(sessionEncoded)
-
-			sessionBytes := []byte(sessionJSON)    // JSON string to byte array
-			json.Unmarshal(sessionBytes, &SESSION) // JSON to slice of maps
+// first keeps the first value of each key
+func first(values map[string][]string) map[string]string {
+	m := make(map[string]string, len(values))
+	for key, list := range values {
+		if len(list) > 0 {
+			m[key] = list[0]
 		}
 	}
-
-	return SESSION
+	return m
 }
 
-// parseHEADER extracts Headers from a request, then returns them as map
-func parseHEADER(r *http.Request) map[string]string {
+// server builds the _SERVER map for a script answering urlPath
+func (h *Handler) server(r *http.Request, urlPath string) map[string]string {
+	workDir, _ := os.Getwd()
+	ip, port, _ := net.SplitHostPort(r.RemoteAddr)
+	requestURI, _ := url.Parse(r.RequestURI)
 
-	_map := make(map[string]string) // Creating empty map
-
-	for header, value := range r.Header {
-		_map[header] = value[0]
+	// A path without an extension is taken for a directory, as the script's location
+	scriptDir := urlPath
+	if path.Ext(urlPath) != "" {
+		scriptDir = path.Dir(urlPath)
+	}
+	join := func(elem ...string) string { // keeps trailing slashes, as scripts have always seen them
+		if runtime.GOOS == "windows" {
+			return filepath.FromSlash(joinRaw(elem))
+		}
+		return joinRaw(elem)
 	}
 
-	return _map
-}
-
-// parseMULTIPARTS extracts MultipartForm parameters from a request, then returns them
-func (h *Handler) parseMULTIPARTS(r *http.Request) {
-
-	if r.Method == "POST" {
-		r.ParseMultipartForm(1 << 20) // upload file size maximum: 1MB
-
-		fileUploadKey := h.fileUploadKey(r)
-
-		file, handler, err := r.FormFile(fileUploadKey)
-		if err != nil {
-			return // Maybe there is no file upload
-		}
-		defer file.Close()
-
-		h.log.Info("file uploaded", "name", handler.Filename, "size", handler.Size, "header", handler.Header)
-
-		tempFile, err := os.CreateTemp(h.config.UploadsRoot, fileUploadKey+"_*_"+handler.Filename)
-		if err != nil {
-			h.log.Error("saving upload", "error", err)
-			return
-		}
-		defer tempFile.Close()
-
-		if _, err := io.Copy(tempFile, file); err != nil {
-			h.log.Error("saving upload", "error", err)
-		}
-
+	documentRoot := h.config.DocumentRoot
+	if !filepath.IsAbs(documentRoot) {
+		documentRoot = join(workDir, documentRoot)
 	}
 
+	return map[string]string{
+		"DOCUMENT_ROOT":          documentRoot,
+		"SCRIPT_PATH":            join(documentRoot, scriptDir),
+		"CURRENT_PATH":           workDir,
+		"DOCUMENT_ROOT_RELATIVE": h.config.DocumentRoot,
+		"SCRIPT_PATH_RELATIVE":   "/" + scriptDir,
+		"GOP_SELF":               urlPath,
+		"SCRIPT_NAME":            urlPath,
+		"SCRIPT_BASENAME":        path.Base(urlPath),
+		"HTTP_REFERER":           r.Referer(),
+		"HTTP_USER_AGENT":        r.UserAgent(),
+		"REMOTE_ADDR":            ip,
+		"REMOTE_PORT":            port,
+		"REQUEST_METHOD":         r.Method,
+		"SERVER_NAME":            r.Host,
+		"SERVER_PROTOCOL":        r.Proto,
+		"REQUEST_URI":            requestURI.String(),
+		"REQUEST_PATH":           requestURI.Path,
+		"RAW_QUERY":              requestURI.RawQuery,
+		"FILE_UPLOAD_KEY":        h.fileUploadKey(r, urlPath),
+		"SIGNATURE":              h.config.ServerSignature,
+		"SESSION_COOKIE_NAME":    h.config.SessionCookieName,
+		"LOGGING_LEVEL":          h.config.LoggingLevel,
+	}
 }
 
-// fileUploadKey is the form field name a request's script accepts an upload under
-func (h *Handler) fileUploadKey(r *http.Request) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(r.Host+r.UserAgent()+urlPath(r)+h.config.GopKeySalt)))
+// joinRaw joins path elements with slashes without cleaning them
+func joinRaw(elem []string) string {
+	joined := elem[0]
+	for _, e := range elem[1:] {
+		joined += "/" + e
+	}
+	return joined
+}
+
+// fileUploadKey is the form field a script's page accepts an upload under. It is a MAC of
+// the client and the script, so only a page the server rendered for this client knows it.
+func (h *Handler) fileUploadKey(r *http.Request, urlPath string) string {
+	mac := hmac.New(sha256.New, h.uploadKey)
+	io.WriteString(mac, r.Host+"\n"+r.UserAgent()+"\n"+urlPath)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// saveUpload stores the file sent under FILE_UPLOAD_KEY, if any, under a random name
+func (h *Handler) saveUpload(r *http.Request, urlPath string) {
+	if r.MultipartForm == nil {
+		return
+	}
+	file, header, err := r.FormFile(h.fileUploadKey(r, urlPath))
+	if errors.Is(err, http.ErrMissingFile) {
+		return
+	}
+	if err != nil {
+		h.log.Warn("reading upload", "error", err)
+		return
+	}
+	defer file.Close()
+	if header.Size > maxUpload {
+		h.log.Warn("upload too large", "name", header.Filename, "size", header.Size)
+		return
+	}
+
+	stored, err := os.CreateTemp(h.config.UploadsRoot, "upload-*")
+	if err == nil {
+		_, err = io.Copy(stored, file)
+		if closeErr := stored.Close(); err == nil {
+			err = closeErr
+		}
+	}
+	if err != nil {
+		h.log.Error("saving upload", "error", err)
+		return
+	}
+	h.log.Info("file uploaded", "name", header.Filename, "size", header.Size, "stored", stored.Name())
 }

@@ -27,9 +27,9 @@ Content-Type: text/html
 Server: Golang Preprocessor for Web Services v1.0
 X-Cache-Status: HIT
 
-The value of _POST["key"]:  
+The value of _POST["key"]:  with file
 <br/><br/>
-The value of the _POST map:  map[]
+The value of the _POST map:  map[key:with file submit:Upload Image]
 <br/><br/>
 The _SERVER METHOD:  POST
 
@@ -43,4 +43,4 @@ The _SERVER METHOD:  POST
 
 === [files in private/uploads]
 .gitignore (55 bytes)
-{{SHA256}}_{{RANDOM}}_hello.txt (28 bytes)
+upload-{{RANDOM}} (28 bytes)
