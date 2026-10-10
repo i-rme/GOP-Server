@@ -19,9 +19,18 @@ func legacyProcess(filePath string, options Options) (string, bool) {
 		imports += "import " + importLine(spec) + "\n"
 	}
 	_imports, _functions, _content, valid := legacyDependency(filePath)
-	return "package main\r\n" + imports + _imports + runtimeVariables +
+	return "package main\r\n" + imports + _imports + "\n" + runtimeConstants(options) +
 		"\r\nfunc main() {" + _content + "\r\n__housekeeping()\r\n\r\n}\r\n" +
-		runtimeFunctions(options) + _functions, valid
+		runtimeCode(options) + _functions, valid
+}
+
+// runtimeCode is the runtime without its imports
+func runtimeCode(options Options) string {
+	code := ""
+	for _, runtime := range runtimeFor(options) {
+		code += runtime.code
+	}
+	return code
 }
 
 func legacyDependency(filePath string) (string, string, string, bool) {

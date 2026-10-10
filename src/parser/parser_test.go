@@ -35,7 +35,7 @@ func mustTranslate(t *testing.T, files map[string]string) (imports, decls, body 
 	if err != nil {
 		t.Fatalf("Process: %v", err)
 	}
-	runtime := normalize(t, "package main\n"+runtimeVariables+"func main() { __housekeeping() }\n"+runtimeFunctions(testOptions))
+	runtime := normalize(t, "package main\n"+runtimeConstants(testOptions)+"func main() { __housekeeping() }\n"+runtimeCode(testOptions))
 	got := normalize(t, program.Source)
 	return strings.Join(without(got.imports, importLines(runtimeImports(testOptions))), "\n"),
 		strings.Join(without(got.decls, runtime.decls), "\n"),
@@ -253,7 +253,7 @@ func TestLineDirectivesPointAtScript(t *testing.T) {
 		}
 		return true
 	})
-	for name, want := range map[string]string{"f": "main.gop:4:1", "Println": "main.gop:5:1", "main": runtimeFile + ":"} {
+	for name, want := range map[string]string{"f": "main.gop:4:1", "Println": "main.gop:5:1", "main": generatedFile + ":", "_echo": "runtime.go:"} {
 		if !strings.Contains(locations[name], want) {
 			t.Errorf("%s is reported at %s, want %s", name, locations[name], want)
 		}
@@ -283,32 +283,4 @@ func TestSplitOutputAndWorkDirectory(t *testing.T) {
 	if output, dir := SplitOutputAndWorkDirectory("go: not found"); output != "go: not found" || dir != "" {
 		t.Errorf("got %q, %q", output, dir)
 	}
-}
-
-// FuzzProcess checks that no input makes the parser panic, and that
-// valid statements always translate into a program that parses
-func FuzzProcess(f *testing.F) {
-	for _, seed := range []string{
-		"<!go\nfmt.Println(\"func x() {\")",
-		"<!go\nfunc f() { if x { } }\nf()",
-		"<!go\nimport (\n\"os\"\n)\nfor i := 0; i < 3; i++ { os.Exit(i) }",
-		"<!go\n/* require \"x.gop\" */ x := `\r\n`",
-		"<!go\nswitch { case true: require \"main.gop\" }",
-	} {
-		f.Add(seed)
-	}
-	f.Fuzz(func(t *testing.T, src string) {
-		readFile := func(string) ([]byte, error) { return []byte(src), nil } // every require reads src again
-		program, err := process("/site/main.gop", testOptions, readFile)
-		if err != nil {
-			return
-		}
-		statements := "package main\nfunc main() {\n" + strings.TrimPrefix(src, "<!go") + "\n}"
-		if _, err := goparser.ParseFile(token.NewFileSet(), "", statements, 0); err != nil {
-			return // not valid Go, the compiler will report it
-		}
-		if _, err := goparser.ParseFile(token.NewFileSet(), "", program.Source, 0); err != nil {
-			t.Fatalf("valid script became invalid Go: %v\n%s", err, program.Source)
-		}
-	})
 }

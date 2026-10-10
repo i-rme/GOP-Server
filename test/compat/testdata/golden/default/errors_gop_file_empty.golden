@@ -47,7 +47,7 @@ X-Cache-Status: MISS
 			<h3>There was an error in your .gop source</h3>
 		</div>
 		<div class="error-details">
-			<pre>Gop files and dependencies have to start with the &lt;!go tag</pre>
+			<pre>gop_file_empty.gop: GOP files and dependencies have to start with the &lt;!go tag</pre>
 		</div>
 		<div class="signature">
 		<pre>Golang Preprocessor for Web Services v1.0</pre>
@@ -105,7 +105,7 @@ X-Cache-Status: MISS
 			<h3>There was an error in your .gop source</h3>
 		</div>
 		<div class="error-details">
-			<pre>Gop files and dependencies have to start with the &lt;!go tag</pre>
+			<pre>gop_file_empty.gop: GOP files and dependencies have to start with the &lt;!go tag</pre>
 		</div>
 		<div class="signature">
 		<pre>Golang Preprocessor for Web Services v1.0</pre>

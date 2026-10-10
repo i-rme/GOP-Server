@@ -47,21 +47,21 @@ X-Cache-Status: MISS
 			<h3>There was an error in your .gop source</h3>
 		</div>
 		<div class="error-details">
-			<pre>The compiler detected an error on line 31.
+			<pre>The compiler detected an error on line 9.
 
 invalid operation: &#34;&lt;p&gt;&#34; + i (mismatched types untyped string and int)
 
 The code related to the error is shown below:
 	
-27.   i := 1
-28.   
-29.   // Loop starting on 1 and ending on 10
-30.   for i &lt;= 10 {
-31.       fmt.Println(&#34;&lt;p&gt;&#34;+ i +&#34;&lt;/p&gt;&#34;)
-32.       i++
-33.   }
-34.   
-35.   // It does not work because the integer has to be converted into a string
+5.   i := 1
+6.   
+7.   // Loop starting on 1 and ending on 10
+8.   for i &lt;= 10 {
+9.       fmt.Println(&#34;&lt;p&gt;&#34;+ i +&#34;&lt;/p&gt;&#34;)
+10.       i++
+11.   }
+12.   
+13.   // It does not work because the integer has to be converted into a string
 </pre>
 		</div>
 		<div class="signature">
@@ -120,21 +120,21 @@ X-Cache-Status: MISS
 			<h3>There was an error in your .gop source</h3>
 		</div>
 		<div class="error-details">
-			<pre>The compiler detected an error on line 31.
+			<pre>The compiler detected an error on line 9.
 
 invalid operation: &#34;&lt;p&gt;&#34; + i (mismatched types untyped string and int)
 
 The code related to the error is shown below:
 	
-27.   i := 1
-28.   
-29.   // Loop starting on 1 and ending on 10
-30.   for i &lt;= 10 {
-31.       fmt.Println(&#34;&lt;p&gt;&#34;+ i +&#34;&lt;/p&gt;&#34;)
-32.       i++
-33.   }
-34.   
-35.   // It does not work because the integer has to be converted into a string
+5.   i := 1
+6.   
+7.   // Loop starting on 1 and ending on 10
+8.   for i &lt;= 10 {
+9.       fmt.Println(&#34;&lt;p&gt;&#34;+ i +&#34;&lt;/p&gt;&#34;)
+10.       i++
+11.   }
+12.   
+13.   // It does not work because the integer has to be converted into a string
 </pre>
 		</div>
 		<div class="signature">

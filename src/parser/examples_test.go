@@ -162,3 +162,21 @@ func TestExamplesBuild(t *testing.T) {
 		}
 	}
 }
+
+// TestRuntimeWithMySQLBuilds compiles a script with the MySQL helpers, inside this module for the driver
+func TestRuntimeWithMySQLBuilds(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds with the go command")
+	}
+	program, err := Process("../../public/examples/gop_mysql.gop", Options{MySQL: true, SessionCookieName: "s", HeadersSeparator: "--"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(t.TempDir(), "main.go")
+	if err := os.WriteFile(source, []byte(program.Source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("go", "build", "-o", os.DevNull, source).CombinedOutput(); err != nil {
+		t.Errorf("does not build: %v\n%s", err, output)
+	}
+}

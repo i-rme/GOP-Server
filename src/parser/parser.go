@@ -23,26 +23,21 @@ type Program struct {
 	Files  []string // absolute paths of every .gop file read, the script first
 }
 
-// runtimeFile names the generated code in compiler messages
-const runtimeFile = "gop-runtime.go"
+// generatedFile names the code around the script in compiler messages
+const generatedFile = "generated.go"
 
 // Process reads a .gop script, inlines the files it requires and returns it as a Go program
 func Process(scriptPath string, options Options) (*Program, error) {
-	return process(scriptPath, options, os.ReadFile)
-}
-
-func process(scriptPath string, options Options, readFile func(string) ([]byte, error)) (*Program, error) {
 	root, err := filepath.Abs(scriptPath)
 	if err != nil {
 		return nil, err
 	}
 
 	t := &translation{
-		readFile: readFile,
-		fset:     token.NewFileSet(),
-		baseDir:  filepath.Dir(root),
-		bodies:   make(map[string]string),
-		imports:  make(map[importSpec]bool),
+		fset:    token.NewFileSet(),
+		baseDir: filepath.Dir(root),
+		bodies:  make(map[string]string),
+		imports: make(map[importSpec]bool),
 	}
 	for _, spec := range runtimeImports(options) {
 		t.imports[spec] = true
@@ -57,9 +52,8 @@ func process(scriptPath string, options Options, readFile func(string) ([]byte, 
 
 // translation holds the state of one Process call
 type translation struct {
-	readFile func(string) ([]byte, error)
-	fset     *token.FileSet
-	baseDir  string // paths in errors are shown relative to the script's directory
+	fset    *token.FileSet
+	baseDir string // paths in errors are shown relative to the script's directory
 
 	files   []string          // every file read, in order
 	bodies  map[string]string // translated main() body of each file read
@@ -88,7 +82,7 @@ func (t *translation) include(path string, chain []string, site *Error) (string,
 		return body, nil
 	}
 
-	src, err := t.readFile(path)
+	src, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", t.at(site, path, ErrRequire, "file not found: "+t.display(path))
@@ -106,18 +100,18 @@ func (t *translation) include(path string, chain []string, site *Error) (string,
 		key := importSpec{name: spec.name, path: spec.path}
 		if !t.imports[key] {
 			t.imports[key] = true
-			t.extra.WriteString("import " + lineDirective(path, parsed.file, spec.offset) + importLine(key) + "\n")
+			t.extra.WriteString("import " + positionDirective(path, parsed.file, spec.offset) + importLine(key) + "\n")
 		}
 	}
 	for _, decl := range parsed.decls {
-		t.decls.WriteString("\n" + lineDirective(path, parsed.file, decl.offset) + decl.text + "\n")
+		t.decls.WriteString("\n" + positionDirective(path, parsed.file, decl.offset) + decl.text + "\n")
 	}
 
 	chain = append(chain, path)
 	var body strings.Builder
 	for _, p := range parsed.body {
 		if p.require == "" {
-			body.WriteString(lineDirective(path, parsed.file, p.offset) + p.text)
+			body.WriteString(positionDirective(path, parsed.file, p.offset) + p.text)
 			continue
 		}
 		position := parsed.file.Position(parsed.file.Pos(p.offset))
@@ -142,14 +136,17 @@ func (t *translation) assemble(options Options, body string) string {
 	}
 	out.WriteString(t.extra.String())
 
-	resetLines(&out)
-	out.WriteString(runtimeVariables)
+	lineDirective(&out, generatedFile, 0)
+	out.WriteString(runtimeConstants(options))
 	out.WriteString("\nfunc main() {\n")
 	out.WriteString(body)
-	out.WriteString("\n")
-	resetLines(&out)
+	lineDirective(&out, generatedFile, 0)
 	out.WriteString("__housekeeping()\n}\n")
-	out.WriteString(runtimeFunctions(options))
+
+	for _, runtime := range runtimeFor(options) {
+		lineDirective(&out, runtime.name, runtime.line)
+		out.WriteString(runtime.code)
+	}
 	out.WriteString(t.decls.String())
 
 	return out.String()
@@ -178,19 +175,21 @@ func importLine(spec importSpec) string {
 	return spec.name + " " + strconv.Quote(spec.path)
 }
 
-// lineDirective makes the compiler report what follows at its place in the .gop file,
+// positionDirective makes the compiler report what follows at its place in the .gop file,
 // so build errors point at the line the author wrote
-func lineDirective(path string, file *token.File, offset int) string {
+func positionDirective(path string, file *token.File, offset int) string {
 	position := file.Position(file.Pos(offset))
 	return "/*line " + path + ":" + strconv.Itoa(position.Line) + ":" + strconv.Itoa(position.Column) + "*/"
 }
 
-// resetLines ends the previous line directive: what follows is reported as
-// gop-runtime.go with its real line number in the generated source
-func resetLines(out *strings.Builder) {
+// lineDirective starts a new line reported as the given line of name;
+// line 0 means the line's own number in the generated source
+func lineDirective(out *strings.Builder, name string, line int) {
 	if !strings.HasSuffix(out.String(), "\n") {
 		out.WriteString("\n")
 	}
-	line := strings.Count(out.String(), "\n") + 2 // the directive takes one line
-	out.WriteString("//line " + runtimeFile + ":" + strconv.Itoa(line) + "\n")
+	if line == 0 {
+		line = strings.Count(out.String(), "\n") + 2 // the directive takes one line
+	}
+	out.WriteString("//line " + name + ":" + strconv.Itoa(line) + "\n")
 }
