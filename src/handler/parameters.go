@@ -12,8 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
-	"strings"
 
 	"github.com/i-rme/gop-server/src/repository/filesystem"
 )
@@ -176,25 +174,6 @@ func (h *Handler) parseMULTIPARTS(r *http.Request) {
 
 	}
 
-}
-
-// addHeaders sets the headers a script printed and returns the status it chose, if any
-func addHeaders(w http.ResponseWriter, _headers string, status int) int {
-	headers := make([]string, 0)           // Prepares the slice
-	headersBytes := []byte(_headers)       // JSON string to byte array
-	json.Unmarshal(headersBytes, &headers) // JSON to slice of maps
-
-	for _, header := range headers {
-		h := strings.Split(header, ": ")
-		if len(h) == 2 {
-			w.Header().Set(h[0], h[1])
-		} else {
-			status, _ = strconv.Atoi(h[0])
-		}
-
-	}
-
-	return status
 }
 
 // fileUploadKey is the form field name a request's script accepts an upload under

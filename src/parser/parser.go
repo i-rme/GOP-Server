@@ -21,6 +21,8 @@ type Options struct {
 type Program struct {
 	Source string   // a complete `package main` program
 	Files  []string // absolute paths of every .gop file read, the script first
+	mysql  bool     // the runtime imports the MySQL driver
+	plain  bool     // Source is a standalone .go file, Files[0]
 }
 
 // generatedFile names the code around the script in compiler messages
@@ -47,7 +49,7 @@ func Process(scriptPath string, options Options) (*Program, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Program{Source: t.assemble(options, body), Files: t.files}, nil
+	return &Program{Source: t.assemble(options, body), Files: t.files, mysql: options.MySQL}, nil
 }
 
 // translation holds the state of one Process call

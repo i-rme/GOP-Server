@@ -47,8 +47,10 @@ type Config struct {
 	RateLimitPeriod   int    // period length in seconds
 	RateLimitedScript string // run for clients over the limit
 
-	MySQLSupportEnabled bool // add the _mysqli_* helpers to scripts
-	RunScriptsAsNobody  bool // run scripts as the unprivileged nobody user
+	MySQLSupportEnabled bool     // add the _mysqli_* helpers to scripts
+	RunScriptsAsNobody  bool     // build and run scripts as the unprivileged nobody user
+	BuildTimeout        Duration // limit for compiling a script
+	ExecutionTimeout    Duration // limit for one run of a script
 
 	DeniedNetworks []*net.IPNet `json:"-"` // DenyFrom, parsed
 	Warnings       []string     `json:"-"` // problems that do not stop the server, for the log
@@ -74,6 +76,11 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	}
 	*d = Duration(ns)
 	return nil
+}
+
+// Std returns d as a time.Duration
+func (d Duration) Std() time.Duration {
+	return time.Duration(d)
 }
 
 func (d Duration) String() string {
@@ -109,6 +116,9 @@ func Default() *Config {
 		RateLimitRate:     10,
 		RateLimitPeriod:   20,
 		RateLimitedScript: "/../private/scripts/ip_ratelimited.gop",
+
+		BuildTimeout:     Duration(60 * time.Second),
+		ExecutionTimeout: Duration(6 * time.Second),
 	}
 }
 
@@ -139,6 +149,7 @@ func (c *Config) validate() error {
 
 	check(c.Port > 0 && c.Port < 65536, "Port %d is not between 1 and 65535", c.Port)
 	check(c.ReadTimeout >= 0 && c.WriteTimeout >= 0 && c.IdleTimeout >= 0, "timeouts cannot be negative")
+	check(c.BuildTimeout > 0 && c.ExecutionTimeout > 0, "BuildTimeout and ExecutionTimeout must be positive")
 	check(c.MaxHeaderBytes >= 0, "MaxHeaderBytes cannot be negative")
 
 	info, err := os.Stat(c.DocumentRoot)

@@ -62,10 +62,12 @@ Every key in `config/configuration.json` is optional; a missing key takes its de
 
 Set *GopKeySalt* to a long random string. While it keeps the placeholder value, the server picks a random one at each start and logs a warning.
 
-## Optional Settings
-Enable database support by setting *MySQLSupportEnabled* to `true` in the config file.
+Scripts are compiled with `go build` the first time they are requested (`X-Cache-Status: MISS`) and the binary is reused until the script, or a file it requires, changes (`HIT`). Compiling is limited by *BuildTimeout* (default `"60s"`) and each run by *ExecutionTimeout* (default `"6s"`); a script that runs too long gets a timeout page and is killed together with any process it started.
 
-Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the config file.
+## Optional Settings
+Enable database support by setting *MySQLSupportEnabled* to `true` in the config file. The driver is fetched by the go command the first time a script is built, so no `go get` is needed.
+
+Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the config file. Scripts are then built and run as the `nobody` user. This needs the server to run as root on Linux or another Unix system; elsewhere the server refuses to start rather than run scripts with its own privileges.
 
 ## Important paths
 **Configuration file**: `./config/configuration.json`
@@ -80,10 +82,6 @@ Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the conf
 **Error**: *CreateFile src/main.go: The system cannot find the path specified.* when launching the GOP Server with go run.
 
 **Solution**: Navigate to the GOP-Server directory before launching. ```cd GOP-Server```
-
-**Error**: "*no required module provides package*" when MySQL support is enabled.
-
-**Solution**: Install the missing package using ```go get github.com/go-sql-driver/mysql```
 
 **Error**: "*listen tcp 127.0.0.1:80: bind: permission denied*" when starting the server on linux.
 

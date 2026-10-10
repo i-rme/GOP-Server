@@ -28,15 +28,19 @@ type Handler struct {
 }
 
 // New returns a Handler for the given configuration; stats counts the requests it serves
-func New(c *config.Config, log *slog.Logger, stats *logs.Stats) *Handler {
+func New(c *config.Config, log *slog.Logger, stats *logs.Stats) (*Handler, error) {
+	ctrl, err := controller.New(c, log)
+	if err != nil {
+		return nil, err
+	}
 	return &Handler{
 		config:     c,
 		log:        log,
 		stats:      stats,
-		controller: controller.New(c, log),
+		controller: ctrl,
 		limiter:    newRateLimiter(c.RateLimitRate, time.Duration(c.RateLimitPeriod)*time.Second),
 		gopInfo:    gopInfoPage(c),
-	}
+	}, nil
 }
 
 // ServeHTTP handles a request for anything under the document root
@@ -69,26 +73,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	params := h.parameters(r)
 
-	var output, headers, cached string
-	var status int
-
+	var response controller.Response
 	switch filepath.Ext(urlPath) {
 	case ".go":
-		output, status, cached = h.controller.RunGo(urlPath, params)
+		response = h.controller.RunGo(urlPath, params)
 	case ".gop":
-		output, headers, status, cached = h.controller.RunGop(urlPath, params)
-		status = addHeaders(w, headers, status)
+		response = h.controller.RunGop(urlPath, params)
 	case "":
-		output, headers, status, cached = h.controller.RunIndex(urlPath, params)
-		status = addHeaders(w, headers, status)
+		response = h.controller.RunIndex(urlPath, params)
 	default:
 		h.serveStatic(w, r, urlPath)
 		return
 	}
 
-	w.Header().Set("X-Cache-Status", cached)
-	w.WriteHeader(status)
-	fmt.Fprint(w, output)
+	for _, header := range response.Header {
+		w.Header().Set(header[0], header[1])
+	}
+	w.Header().Set("X-Cache-Status", response.Cache)
+	w.WriteHeader(response.Status)
+	fmt.Fprint(w, response.Body)
 }
 
 // denied reports whether ip is in one of the DenyFrom ranges
