@@ -16,7 +16,7 @@ parseAuthentication_bearer: true true
 json_encode_struct: {"A":1,"B":"x"}
 json_encode_map: {"a":1,"b":2}
 json_encode_slice: ["x","y"]
-json_decode: {"a":1}
+json_decode: map[a:1]
 string_to_int: 42 -7 0
 int_to_string: 99
 isset: false true false
@@ -42,7 +42,7 @@ parseAuthentication_bearer: true true
 json_encode_struct: {"A":1,"B":"x"}
 json_encode_map: {"a":1,"b":2}
 json_encode_slice: ["x","y"]
-json_decode: {"a":1}
+json_decode: map[a:1]
 string_to_int: 42 -7 0
 int_to_string: 99
 isset: false true false

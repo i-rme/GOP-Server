@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	pages "github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/handler/pages"
 	"github.com/i-rme/gop-server/src/parser"
 	"github.com/i-rme/gop-server/src/repository/cache"
 	"github.com/i-rme/gop-server/src/server/config"
@@ -70,7 +70,7 @@ func (c *Controller) Run(path, name, parameters string) Response {
 		HeadersSeparator: c.config.GopHeadersSeparator,
 	})
 	if err != nil {
-		return c.fail(http.StatusInternalServerError, pages.BuildFailedParsing, err.Error())
+		return c.fail(http.StatusInternalServerError, pages.ParseError, err.Error())
 	}
 	return c.run(name, program, parameters, true)
 }
@@ -84,12 +84,12 @@ func (c *Controller) run(urlPath string, program *parser.Program, parameters str
 	case err != nil:
 		var build *worker.BuildError
 		if !errors.As(err, &build) {
-			return c.fail(http.StatusInternalServerError, pages.BuildFailedGopCompilationFatal, err.Error())
+			return c.fail(http.StatusInternalServerError, pages.BuildFailed, err.Error())
 		}
 		if gop {
-			return c.fail(http.StatusInternalServerError, pages.BuildFailedGopCompilationSource, build.Output)
+			return c.fail(http.StatusInternalServerError, pages.CompileError, pages.Explain(build.Output))
 		}
-		return c.fail(http.StatusInternalServerError, pages.BuildFailedGoCompilation, build.Output)
+		return c.fail(http.StatusInternalServerError, pages.CompileError, build.Output)
 	}
 
 	result, err := c.worker.Run(binary, parameters)
@@ -98,13 +98,9 @@ func (c *Controller) run(urlPath string, program *parser.Program, parameters str
 	case errors.Is(err, worker.ErrTimeout):
 		return c.fail(http.StatusInternalServerError, pages.ExecutionTimeout, urlPath)
 	case errors.As(err, &exit):
-		page := pages.RunFailedGoFatal
-		if gop {
-			page = pages.RunFailedGopFatal
-		}
-		return c.fail(http.StatusInternalServerError, page, err.Error()+"\n"+result.Stdout+result.Stderr)
+		return c.fail(http.StatusInternalServerError, pages.RunFailed, err.Error()+"\n"+result.Stdout+result.Stderr)
 	case err != nil:
-		return c.fail(http.StatusInternalServerError, pages.RunFailedGoFatal, err.Error())
+		return c.fail(http.StatusInternalServerError, pages.RunFailed, err.Error())
 	}
 	if result.Stderr != "" {
 		c.log.Debug("script wrote to stderr", "script", urlPath, "stderr", result.Stderr)
@@ -146,7 +142,12 @@ func (c *Controller) build(program *parser.Program) (binary string, hit bool, er
 }
 
 // fail logs a failure and answers with its error page
-func (c *Controller) fail(status, page int, details string) Response {
+func (c *Controller) fail(status int, kind pages.Kind, details string) Response {
 	c.log.Error("request failed", "status", status, "details", details)
-	return Response{Status: status, Body: pages.Render(c.config.ServerSignature, page, details), Cache: "MISS"}
+	return Response{
+		Status: status,
+		Header: [][2]string{{"Content-Type", "text/html; charset=utf-8"}},
+		Body:   pages.Error(c.config.ServerSignature, kind, details),
+		Cache:  "MISS",
+	}
 }

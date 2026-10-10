@@ -36,6 +36,8 @@ type Config struct {
 	Aliases  map[string]string // URL prefix → script, relative to DocumentRoot
 	DenyFrom []string          // CIDR ranges answered with IPDeniedScript
 
+	StatusAllowFrom []string // CIDR ranges allowed to see /server-status/ and /gop-info/
+
 	ServerSignature        string // Server header and page footer
 	DirectoryListingScript string // run for directories without index.gop
 	IPDeniedScript         string // run for clients in DenyFrom
@@ -55,6 +57,7 @@ type Config struct {
 	ExecutionTimeout    Duration // limit for one run of a script
 
 	DeniedNetworks []*net.IPNet `json:"-"` // DenyFrom, parsed
+	StatusNetworks []*net.IPNet `json:"-"` // StatusAllowFrom, parsed
 	Warnings       []string     `json:"-"` // problems that do not stop the server, for the log
 }
 
@@ -106,6 +109,8 @@ func Default() *Config {
 
 		Aliases:  map[string]string{},
 		DenyFrom: []string{},
+
+		StatusAllowFrom: []string{"127.0.0.0/8", "::1/128"},
 
 		ServerSignature:        "Golang Preprocessor for Web Services v1.0",
 		DirectoryListingScript: "/../private/scripts/DirectoryListing.gop",
@@ -160,14 +165,18 @@ func (c *Config) validate() error {
 		check(dir != "", "%s cannot be empty", name)
 	}
 
-	c.DeniedNetworks = nil
-	for _, cidr := range c.DenyFrom {
-		_, network, err := net.ParseCIDR(cidr)
-		check(err == nil, "DenyFrom entry %q is not a CIDR range like 10.1.2.0/24", cidr)
-		if err == nil {
-			c.DeniedNetworks = append(c.DeniedNetworks, network)
+	networks := func(key string, cidrs []string) (parsed []*net.IPNet) {
+		for _, cidr := range cidrs {
+			_, network, err := net.ParseCIDR(cidr)
+			check(err == nil, "%s entry %q is not a CIDR range like 10.1.2.0/24", key, cidr)
+			if err == nil {
+				parsed = append(parsed, network)
+			}
 		}
+		return parsed
 	}
+	c.DeniedNetworks = networks("DenyFrom", c.DenyFrom)
+	c.StatusNetworks = networks("StatusAllowFrom", c.StatusAllowFrom)
 
 	switch c.LoggingLevel {
 	case "debug", "basic", "error", "errors":
@@ -201,4 +210,14 @@ func randomSalt() string {
 		panic(err) // crypto/rand does not fail on supported platforms
 	}
 	return hex.EncodeToString(b)
+}
+
+// Contains reports whether ip is in one of networks
+func Contains(networks []*net.IPNet, ip net.IP) bool {
+	for _, network := range networks {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

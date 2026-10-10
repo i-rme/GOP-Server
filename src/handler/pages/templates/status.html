@@ -1,0 +1,27 @@
+{{define "title"}}Status for {{.Address}}{{end}}
+
+{{define "style"}}
+	#chart { display: flex; align-items: flex-end; gap: 2px; height: 200px; padding: 8px; background: #fff; border: 1px solid #00b0dc; }
+	#chart div { flex: 1; min-height: 1px; background: #00b0dc; }
+{{end}}
+
+{{define "content"}}<h2>Requests in the last five minutes: <span id="total">…</span></h2>
+<div id="chart"></div>
+<p>Each bar is five seconds, newest on the right. Updated every five seconds.</p>
+<p>Page rendered at {{.Now}}.</p>
+<script>
+const chart = document.getElementById("chart"), total = document.getElementById("total");
+async function refresh() {
+	const requests = await (await fetch("?data=true")).json();
+	const max = Math.max(1, ...requests.map(r => r.count));
+	chart.replaceChildren(...requests.map(r => {
+		const bar = document.createElement("div");
+		bar.style.height = (100 * r.count / max) + "%";
+		bar.title = new Date(r.start * 1000).toLocaleTimeString() + ": " + r.count;
+		return bar;
+	}));
+	total.textContent = requests.reduce((sum, r) => sum + r.count, 0);
+}
+refresh();
+setInterval(refresh, 5000);
+</script>{{end}}

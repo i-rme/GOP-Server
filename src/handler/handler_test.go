@@ -179,3 +179,24 @@ func TestParameters(t *testing.T) {
 		t.Errorf("got %q", w.Body)
 	}
 }
+
+func TestStatusPagesAreLoopbackOnly(t *testing.T) {
+	h := site(t, map[string]string{}, func(c *config.Config) {
+		_, loopback, _ := net.ParseCIDR("127.0.0.0/8")
+		c.StatusNetworks = []*net.IPNet{loopback}
+	})
+	for _, test := range []struct {
+		remote string
+		want   int
+	}{{"127.0.0.1:1", 200}, {"192.0.2.1:1", 403}} {
+		for _, serve := range []http.HandlerFunc{h.GopInfo, h.ServerStatus} {
+			r := httptest.NewRequest("GET", "/gop-info/", nil)
+			r.RemoteAddr = test.remote
+			w := httptest.NewRecorder()
+			serve(w, r)
+			if w.Code != test.want {
+				t.Errorf("from %s: %d, want %d", test.remote, w.Code, test.want)
+			}
+		}
+	}
+}
