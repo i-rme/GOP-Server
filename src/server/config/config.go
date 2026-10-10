@@ -2,7 +2,9 @@
 package config
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -184,6 +186,13 @@ func (c *Config) validate() error {
 	}
 
 	return errors.Join(problems...)
+}
+
+// Key derives a secret for one purpose (signing sessions, naming upload fields) from GopKeySalt
+func (c *Config) Key(purpose string) []byte {
+	mac := hmac.New(sha256.New, []byte(c.GopKeySalt))
+	mac.Write([]byte(purpose))
+	return mac.Sum(nil)
 }
 
 func randomSalt() string {

@@ -15,6 +15,8 @@ const (
 	RunFailedGoFatal
 	RunFailedGopFatal
 	BuildTimeout
+	BadRequest
+	InternalError
 )
 
 // Render returns an error page in HTML; signature is the configured ServerSignature
@@ -47,6 +49,12 @@ func Render(signature string, errorCode int, details string) string {
 	case BuildTimeout:
 		title = "Build timeout"
 		subtitle = "Building the script " + details + " took longer than BuildTimeout."
+	case BadRequest:
+		title = "Error 400 - Bad request"
+		subtitle = details
+	case InternalError:
+		title = "Error 500 - Internal server error"
+		subtitle = "The server failed while answering this request."
 	case BuildFailedParsing:
 		title = "There was an error in your .gop source"
 		subtitle = details

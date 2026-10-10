@@ -69,6 +69,17 @@ Enable database support by setting *MySQLSupportEnabled* to `true` in the config
 
 Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the config file. Scripts are then built and run as the `nobody` user. This needs the server to run as root on Linux or another Unix system; elsewhere the server refuses to start rather than run scripts with its own privileges.
 
+## Upgrading from 1.0
+Existing scripts, configuration files and URLs keep working. A few things changed on purpose:
+
+- `_GET` holds only the URL query. Form values sent in a POST body are in `_POST` (including multipart forms, whose text fields used to be missing).
+- The session cookie is signed by the server, so clients can no longer edit `_SESSION`. Cookies from older versions are ignored, which logs every visitor out once. The cookie is `HttpOnly` and `SameSite=Lax`, and `_session_destroy()` deletes it.
+- Uploaded files are stored under a random name in *UploadsRoot*, without the name the client sent; files over 1 MB are refused.
+- What a script writes to stderr is shown only when it fails; otherwise it goes to the debug log.
+- *RunScriptsAsNobody* really drops privileges for building and running scripts, or the server refuses to start.
+- `_SERVER["CURRENT_PATH"]` no longer starts with a stray `/` on Linux.
+- Requests cannot reach files outside *DocumentRoot*, through `..` or through symbolic links. Paths in the configuration (aliases, the listing, denied and rate-limited scripts) can still point outside it.
+
 ## Important paths
 **Configuration file**: `./config/configuration.json`
 

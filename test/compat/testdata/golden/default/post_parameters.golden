@@ -72,9 +72,9 @@ Content-Type: text/html
 Server: Golang Preprocessor for Web Services v1.0
 X-Cache-Status: HIT
 
-The value of _POST["key"]:  
+The value of _POST["key"]:  multipart
 <br/><br/>
-The value of the _POST map:  map[]
+The value of the _POST map:  map[key:multipart]
 <br/><br/>
 
 <form method="POST">

@@ -152,7 +152,7 @@ func defaultCases() []testCase {
 			}),
 			withHeader("/examples/gop_sessions.gop", map[string]string{"Cookie": "GopSession=not-base64!"}),
 			withHeader("/__compat/session_destroy.gop", map[string]string{"Cookie": "GopSession={{session}}"}),
-		}},
+		}, Normalize: []rule{re(`(GopSession[=:][\w-]+)\.[\w-]{43}`, "${1}.{{SIGNATURE}}")}},
 		{Name: "request_headers", Steps: []step{
 			withHeader("/__compat/headers.gop", map[string]string{
 				"X-Custom-Header": "custom value",
@@ -200,7 +200,7 @@ func defaultCases() []testCase {
 				FileName:  "hello.txt",
 				FileData:  "hello from the compat suite\n",
 			}},
-		}, Normalize: []rule{re(`_\d+_hello\.txt`, "_{{RANDOM}}_hello.txt")}},
+		}, Normalize: []rule{re(`upload-\d+`, "upload-{{RANDOM}}")}},
 
 		// Static files and missing paths.
 		{Name: "static", Steps: []step{

@@ -2,46 +2,44 @@
 package filesystem
 
 import (
+	"errors"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
+
+// ErrOutsideRoot means a request path leads out of the document root, through .. or a symlink
+var ErrOutsideRoot = errors.New("path is outside the document root")
+
+// ResolveInRoot returns the real path a URL path names inside root. Every request
+// path goes through it. It fails when the path does not exist or, after following
+// symlinks, is not inside root.
+func ResolveInRoot(root, urlPath string) (string, error) {
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", err
+	}
+	if realRoot, err = filepath.Abs(realRoot); err != nil {
+		return "", err
+	}
+
+	// Cleaning against "/" drops any .. that would climb above the root
+	joined := filepath.Join(realRoot, filepath.FromSlash(path.Clean("/"+urlPath)))
+	real, err := filepath.EvalSymlinks(joined)
+	if err != nil {
+		return "", err
+	}
+	if real != realRoot && !strings.HasPrefix(real, realRoot+string(filepath.Separator)) {
+		return "", ErrOutsideRoot
+	}
+	return real, nil
+}
 
 // Exists reports whether path is an existing regular file (not a directory)
 func Exists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
-}
-
-// DirectoryExists reports whether path is an existing directory
-func DirectoryExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
-
-// Directory returns urlPath itself when it has no extension, as directories usually don't,
-// and its parent otherwise
-func Directory(urlPath string) string {
-	if filepath.Ext(urlPath) == "" {
-		return urlPath
-	}
-	return filepath.Dir(urlPath)
-}
-
-// WriteTemp writes content to a new file in dir and returns its path
-func WriteTemp(dir, pattern, content string) (string, error) {
-	file, err := os.CreateTemp(dir, pattern)
-	if err != nil {
-		return "", err
-	}
-	_, err = file.WriteString(content)
-	if closeErr := file.Close(); err == nil { // Windows keeps an open file locked
-		err = closeErr
-	}
-	if err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-	return file.Name(), nil
 }
 
 // ResetDir empties dir, creating it if needed

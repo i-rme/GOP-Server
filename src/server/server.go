@@ -3,15 +3,17 @@ package server
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"time"
 
 	"github.com/i-rme/gop-server/src/handler"
+	"github.com/i-rme/gop-server/src/handler/errors"
 	"github.com/i-rme/gop-server/src/repository/filesystem"
 	"github.com/i-rme/gop-server/src/server/config"
 	"github.com/i-rme/gop-server/src/server/logs"
@@ -48,7 +50,7 @@ func New(c *config.Config, log *slog.Logger) (*Server, error) {
 		log: log,
 		http: &http.Server{
 			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(c.Port)),
-			Handler:        timed(mux, log),
+			Handler:        recovered(timed(mux, log), log, c.ServerSignature),
 			ReadTimeout:    c.ReadTimeout.Std(),
 			WriteTimeout:   c.WriteTimeout.Std(),
 			IdleTimeout:    c.IdleTimeout.Std(),
@@ -80,7 +82,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if err := s.http.Shutdown(shutdownCtx); err != nil {
 		return err
 	}
-	if err := <-served; !errors.Is(err, http.ErrServerClosed) {
+	if err := <-served; err != http.ErrServerClosed {
 		return err
 	}
 	return nil
@@ -92,5 +94,22 @@ func timed(next http.Handler, log *slog.Logger) http.Handler {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		log.Debug("served", "remote", r.RemoteAddr, "path", r.URL.Path, "duration", time.Since(start))
+	})
+}
+
+// recovered turns a panic in a handler into a logged error and the 500 page, instead of a dropped connection
+func recovered(next http.Handler, log *slog.Logger, signature string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				if err == http.ErrAbortHandler {
+					panic(err)
+				}
+				log.Error("panic serving request", "path", r.URL.Path, "panic", err, "stack", string(debug.Stack()))
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, errors.Render(signature, errors.InternalError, ""))
+			}
+		}()
+		next.ServeHTTP(w, r)
 	})
 }

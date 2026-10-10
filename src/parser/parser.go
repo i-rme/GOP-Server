@@ -12,9 +12,8 @@ import (
 
 // Options are the server settings baked into the generated program
 type Options struct {
-	MySQL             bool   // adds the _mysqli_* helpers and the MySQL driver
-	SessionCookieName string // cookie the session is stored in
-	HeadersSeparator  string // line prefix separating the output from the headers
+	MySQL            bool   // adds the _mysqli_* helpers and the MySQL driver
+	HeadersSeparator string // line prefix separating the output from the headers
 }
 
 // Program is the Go translation of a .gop script

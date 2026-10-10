@@ -105,3 +105,14 @@ func chdir(t *testing.T, dir string) {
 	}
 	t.Cleanup(func() { os.Chdir(previous) })
 }
+
+func TestKeysDifferByPurposeAndSalt(t *testing.T) {
+	a := &Config{GopKeySalt: "a"}
+	b := &Config{GopKeySalt: "b"}
+	if string(a.Key("session")) == string(a.Key("upload")) || string(a.Key("session")) == string(b.Key("session")) {
+		t.Error("derived keys collide")
+	}
+	if string(a.Key("session")) != string(a.Key("session")) {
+		t.Error("derived keys are not stable")
+	}
+}

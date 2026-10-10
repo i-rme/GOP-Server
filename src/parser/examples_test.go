@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-var testOptions = Options{SessionCookieName: "GOPSESSID", HeadersSeparator: "<!--GOP-HEADERS-S3P4R4T0R"}
+var testOptions = Options{HeadersSeparator: "<!--GOP-HEADERS-S3P4R4T0R"}
 
 // scripts lists every .gop file shipped with the server
 func scripts(t *testing.T) []string {
@@ -41,7 +41,7 @@ func scripts(t *testing.T) []string {
 // TestExamplesMatchLegacy checks that every script the regex-based parser accepted
 // still becomes the same program, and that the ones it rejected still fail
 func TestExamplesMatchLegacy(t *testing.T) {
-	for _, options := range []Options{testOptions, {MySQL: true, SessionCookieName: "s", HeadersSeparator: "--"}} {
+	for _, options := range []Options{testOptions, {MySQL: true, HeadersSeparator: "--"}} {
 		for _, path := range scripts(t) {
 			legacy, legacyValid := legacyProcess(path, options)
 			program, err := Process(path, options)
@@ -168,7 +168,7 @@ func TestRuntimeWithMySQLBuilds(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds with the go command")
 	}
-	program, err := Process("../../public/examples/gop_mysql.gop", Options{MySQL: true, SessionCookieName: "s", HeadersSeparator: "--"})
+	program, err := Process("../../public/examples/gop_mysql.gop", Options{MySQL: true, HeadersSeparator: "--"})
 	if err != nil {
 		t.Fatal(err)
 	}

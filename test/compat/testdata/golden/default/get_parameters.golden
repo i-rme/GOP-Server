@@ -32,6 +32,6 @@ Content-Type: text/html
 Server: Golang Preprocessor for Web Services v1.0
 X-Cache-Status: HIT
 
-The value of _GET["key"]:  posted
+The value of _GET["key"]:  
 <br/><br/>
-The value of the _GET map:  map[key:posted q:1]
+The value of the _GET map:  map[q:1]

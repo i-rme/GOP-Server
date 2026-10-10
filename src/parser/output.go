@@ -9,6 +9,8 @@ import (
 type Trailer struct {
 	Status  int         `json:"status"`  // 0 when the script set none
 	Headers [][2]string `json:"headers"` // name and value, in the order they were set
+
+	Session map[string]string `json:"session"` // nil when the script did not use the session
 }
 
 // SplitOutput separates a script's output from the trailer the runtime prints after the separator.
