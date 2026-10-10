@@ -22,9 +22,7 @@ go test ./... -run 'TestCompat/default/sessions' -args -update
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `GOP_SERVER_BIN` | builds `./src` from the site root | server binary under test |
-| `GOP_SITE_ROOT` | the repository root | where `config/`, `public/`, `private/`, `go.mod` are copied from |
-| `GOP_SERVER_ARGS` | none | extra command-line arguments for the server |
+| `GOP_SERVER_BIN` | builds `./src` from the repository root | server binary under test |
 | `GOP_COMPAT_OUT` | unset | on a mismatch, write the actual output here (CI uploads it) |
 
 On Linux the current server only works as root: it recreates its cache directory

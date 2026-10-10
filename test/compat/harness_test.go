@@ -158,7 +158,7 @@ func TestCompat(t *testing.T) {
 	}
 }
 
-// serverBinary returns GOP_SERVER_BIN, or builds ./src from the site root.
+// serverBinary returns GOP_SERVER_BIN, or builds ./src from the repository root.
 func serverBinary(t *testing.T) string {
 	if bin := os.Getenv("GOP_SERVER_BIN"); bin != "" {
 		abs, err := filepath.Abs(bin)
@@ -176,14 +176,9 @@ func serverBinary(t *testing.T) string {
 	return bin
 }
 
-// siteRoot is the directory holding config/, public/, private/ and go.mod:
-// GOP_SITE_ROOT, or the repository root two levels up.
+// siteRoot is the repository root, which holds config/, public/, private/ and go.mod.
 func siteRoot(t *testing.T) string {
-	root := os.Getenv("GOP_SITE_ROOT")
-	if root == "" {
-		root = filepath.Join("..", "..")
-	}
-	abs, err := filepath.Abs(root)
+	abs, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,11 +233,7 @@ func startServer(t *testing.T, bin, site string, overrides map[string]interface{
 	}
 
 	srv := &server{root: work, host: fmt.Sprintf("127.0.0.1:%d", port), log: &lockedBuffer{}}
-	var args []string
-	if extra := os.Getenv("GOP_SERVER_ARGS"); extra != "" {
-		args = strings.Fields(extra)
-	}
-	srv.cmd = exec.Command(bin, args...)
+	srv.cmd = exec.Command(bin)
 	srv.cmd.Dir = work
 	srv.cmd.Stdout = srv.log
 	srv.cmd.Stderr = srv.log
