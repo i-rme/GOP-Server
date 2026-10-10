@@ -1,54 +1,38 @@
 package handler
 
 import (
-	"net/http"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
+	"sync"
 	"time"
 )
 
-// RecentRequests stores some stats about recent requests
-var RecentRequests map[string]int
+// rateLimiter counts requests per client in fixed windows of one period.
+// It is safe for concurrent use.
+type rateLimiter struct {
+	rate   int
+	period time.Duration
 
-// RecentRequestsPeriod stores the timestamp of the period to track when to reset it
-var RecentRequestsPeriod int32
-
-func init() {
-	RecentRequests = make(map[string]int)
-	RecentRequestsPeriod = 0
+	mu     sync.Mutex
+	window time.Time // start of the current window
+	counts map[string]int
 }
 
-// RateLimited tries to handle RateLimited requests
-func RateLimited(w http.ResponseWriter, r *http.Request) {
-	logs.WriteError("IP address is rate limited.")
-	r.URL.Path = config.RateLimitedScript
-
-	Handle(w, r)
-
-	logs.WriteError("IP address is rate limited.")
-
+func newRateLimiter(rate int, period time.Duration) *rateLimiter {
+	return &rateLimiter{rate: rate, period: period, counts: make(map[string]int)}
 }
 
-// IsRateLimited checks if the ipAddress has exceeded the limit
-func IsRateLimited(ipAddress string, urlPath string) bool {
-
-	if urlPath == config.RateLimitedScript[1:] {
+// allow counts a request from client at now and reports whether it may be served:
+// a client is limited once it made more than rate requests in the current window
+func (l *rateLimiter) allow(client string, now time.Time) bool {
+	window := now.Truncate(l.period)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !window.Equal(l.window) {
+		l.window = window
+		clear(l.counts)
+	}
+	if l.counts[client] > l.rate {
 		return false
 	}
-
-	return RecentRequests[ipAddress] > config.RateLimitRate
-
-}
-
-func addRequestRateLimit(ipAddress string) {
-
-	timestamp := int32(time.Now().Round(time.Duration(config.RateLimitPeriod) * time.Second).Unix()) //Timestamp rounded to RateLimitPeriod seconds
-
-	if timestamp != RecentRequestsPeriod {
-		RecentRequests = make(map[string]int)
-		RecentRequestsPeriod = timestamp
-	}
-
-	RecentRequests[ipAddress]++
-
+	l.counts[client]++
+	return true
 }

@@ -1,169 +1,184 @@
+// Package config loads and validates config/configuration.json.
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"pfg/src/repository/filesystem"
+	"net"
+	"os"
+	"strings"
 	"time"
 )
 
-var (
-	//Port specifies the port number that the server will listen to
-	Port int
+// PlaceholderSalt is the GopKeySalt shipped in the example configuration
+const PlaceholderSalt = "INSERT_RANDOM_SECURE_STRING_HERE"
 
-	// Address specifies the address for the server to listen on
-	Address string
+// Config is the server configuration. Every key is optional; see Default for the
+// values of missing keys. Relative paths are resolved against the working directory.
+type Config struct {
+	Port           int      // port the server listens on
+	Address        string   // address the server listens on, empty for all
+	ReadTimeout    Duration // from accepting the connection to reading the whole request
+	WriteTimeout   Duration // from reading the request headers to writing the whole response
+	IdleTimeout    Duration // keep-alive timeout
+	MaxHeaderBytes int      // largest request header accepted
 
-	//ReadTimeout is the time from when the connection is accepted to when the request body is fully read
-	ReadTimeout time.Duration
+	DocumentRoot string // directory served, holding the .gop, .go and static files
+	CacheRoot    string // directory for compiled scripts, emptied at startup
+	LogRoot      string // directory for log files, one per start
+	UploadsRoot  string // directory uploaded files are saved to
 
-	// WriteTimeout is the time from the end of the request header read to the end of the response write
-	WriteTimeout time.Duration
+	Aliases  map[string]string // URL prefix → script, relative to DocumentRoot
+	DenyFrom []string          // CIDR ranges answered with IPDeniedScript
 
-	// IdleTimeout is the Keep-Alive timeout
-	IdleTimeout time.Duration
+	ServerSignature        string // Server header and page footer
+	DirectoryListingScript string // run for directories without index.gop
+	IPDeniedScript         string // run for clients in DenyFrom
+	SessionCookieName      string // cookie holding the script session
+	GopHeadersSeparator    string // line separating a script's output from its headers
+	LoggingLevel           string // debug, basic or error
+	GopKeySalt             string // secret mixed into server-generated keys
 
-	// MaxHeaderBytes is the maximum permitted size of the headers in an HTTP request
-	MaxHeaderBytes int
+	RateLimitEnabled  bool   // answer clients over the limit with RateLimitedScript
+	RateLimitRate     int    // requests allowed per client and period
+	RateLimitPeriod   int    // period length in seconds
+	RateLimitedScript string // run for clients over the limit
 
-	// DocumentRoot is the directory where the go, gop and static files are placed
-	DocumentRoot string
+	MySQLSupportEnabled bool // add the _mysqli_* helpers to scripts
+	RunScriptsAsNobody  bool // run scripts as the unprivileged nobody user
 
-	// CacheRoot is directory where the cache is stored
-	CacheRoot string
-
-	// LogRoot is directory where logs are stored
-	LogRoot string
-
-	// UploadsRoot is directory where uploaded files are stored
-	UploadsRoot string
-
-	// Aliases defines the relation between urls to be mapped and the script executed
-	Aliases map[string]string
-
-	// DenyFrom defines a list of CIDR IP ranges to block from our server
-	DenyFrom []string
-
-	// ServerSignature is a string with the server name and version
-	ServerSignature string
-
-	// DirectoryListingScript defines the path to the GOP script that handles Directory Listing
-	DirectoryListingScript string
-
-	// IPDeniedScript defines the path to the GOP script that handles IP Denied error
-	IPDeniedScript string
-
-	// SessionCookieName defines the name of the Session Cookie
-	SessionCookieName string
-
-	// GopHeadersSeparator is a string used internally to divide the GOP output and the headers
-	GopHeadersSeparator string
-
-	// LoggingLevel defines the detail of the logs: debug, basic, errors
-	LoggingLevel string
-
-	// GopKeySalt defines a string that will be used as salt for generating internal keys like the one used in file upload
-	GopKeySalt string
-
-	// RateLimitEnabled defines if the Rate Limiting feature is enabled or not
-	RateLimitEnabled bool
-
-	// RateLimitRate defines the number of requests per unit of RateLimitPeriod that will trigger the Rate Limiting
-	RateLimitRate int
-
-	// RateLimitPeriod defines the number of seconds used in the Rate Limiting calculation
-	RateLimitPeriod int
-
-	// RateLimitedScript defines the path to the GOP script that handles IP Rate Limited error
-	RateLimitedScript string
-
-	// MySQLSupportEnabled defines if MySQL database support is enabled or not
-	MySQLSupportEnabled bool
-
-	// RunScriptsAsNobody defines if GOP scripts should run without privileges
-	RunScriptsAsNobody bool
-)
-
-//Configuration defines the data type of the configuration file
-type Configuration struct {
-	Port                   int
-	Address                string
-	ReadTimeout            time.Duration
-	WriteTimeout           time.Duration
-	IdleTimeout            time.Duration
-	MaxHeaderBytes         int
-	DocumentRoot           string
-	CacheRoot              string
-	LogRoot                string
-	UploadsRoot            string
-	Aliases                map[string]string
-	DenyFrom               []string
-	ServerSignature        string
-	DirectoryListingScript string
-	IPDeniedScript         string
-	SessionCookieName      string
-	GopHeadersSeparator    string
-	LoggingLevel           string
-	GopKeySalt             string
-	RateLimitEnabled       bool
-	RateLimitRate          int
-	RateLimitPeriod        int
-	RateLimitedScript      string
-	MySQLSupportEnabled    bool
-	RunScriptsAsNobody     bool
+	DeniedNetworks []*net.IPNet `json:"-"` // DenyFrom, parsed
+	Warnings       []string     `json:"-"` // problems that do not stop the server, for the log
 }
 
-func init() {
+// Duration is a time.Duration written in JSON as nanoseconds (12000000000) or as a string ("12s")
+type Duration time.Duration
 
-	configFile := ReadSerialized("config/configuration.json")
-
-	Port = configFile.Port
-	Address = configFile.Address
-	ReadTimeout = configFile.ReadTimeout
-	WriteTimeout = configFile.WriteTimeout
-	IdleTimeout = configFile.IdleTimeout
-	MaxHeaderBytes = configFile.MaxHeaderBytes
-	DocumentRoot = configFile.DocumentRoot
-	CacheRoot = configFile.CacheRoot
-	LogRoot = configFile.LogRoot
-	UploadsRoot = configFile.UploadsRoot
-	Aliases = configFile.Aliases
-	DenyFrom = configFile.DenyFrom
-	ServerSignature = configFile.ServerSignature
-	DirectoryListingScript = configFile.DirectoryListingScript
-	IPDeniedScript = configFile.IPDeniedScript
-	SessionCookieName = configFile.SessionCookieName
-	GopHeadersSeparator = configFile.GopHeadersSeparator
-	LoggingLevel = configFile.LoggingLevel
-	GopKeySalt = configFile.GopKeySalt
-	RateLimitEnabled = configFile.RateLimitEnabled
-	RateLimitRate = configFile.RateLimitRate
-	RateLimitPeriod = configFile.RateLimitPeriod
-	RateLimitedScript = configFile.RateLimitedScript
-	MySQLSupportEnabled = configFile.MySQLSupportEnabled
-	RunScriptsAsNobody = configFile.RunScriptsAsNobody
+// UnmarshalJSON accepts both forms of a Duration
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	if len(b) > 0 && b[0] == '"' {
+		var s string
+		if err := json.Unmarshal(b, &s); err != nil {
+			return err
+		}
+		parsed, err := time.ParseDuration(s)
+		*d = Duration(parsed)
+		return err
+	}
+	var ns int64
+	if err := json.Unmarshal(b, &ns); err != nil {
+		return fmt.Errorf("duration must be nanoseconds or a string like \"12s\": %s", b)
+	}
+	*d = Duration(ns)
+	return nil
 }
 
-// ReadSerialized reads a config file with serialized JSON and returns an object
-func ReadSerialized(filePath string) Configuration {
+func (d Duration) String() string {
+	return time.Duration(d).String()
+}
 
-	var object Configuration
+// Default returns the values used for keys missing from the configuration file
+func Default() *Config {
+	return &Config{
+		Port:           80,
+		Address:        "127.0.0.1",
+		ReadTimeout:    Duration(12 * time.Second),
+		WriteTimeout:   Duration(12 * time.Second),
+		IdleTimeout:    Duration(60 * time.Second),
+		MaxHeaderBytes: 1000000,
 
-	objectJSON, err := filesystem.Read(filePath)
+		DocumentRoot: "public",
+		CacheRoot:    "cache",
+		LogRoot:      "logs",
+		UploadsRoot:  "private/uploads",
 
+		Aliases:  map[string]string{},
+		DenyFrom: []string{},
+
+		ServerSignature:        "Golang Preprocessor for Web Services v1.0",
+		DirectoryListingScript: "/../private/scripts/DirectoryListing.gop",
+		IPDeniedScript:         "/../private/scripts/ip_denied.gop",
+		SessionCookieName:      "GopSession",
+		GopHeadersSeparator:    "<!--GOP-HEADERS-S3P4R4T0R",
+		LoggingLevel:           "basic",
+		GopKeySalt:             PlaceholderSalt,
+
+		RateLimitRate:     10,
+		RateLimitPeriod:   20,
+		RateLimitedScript: "/../private/scripts/ip_ratelimited.gop",
+	}
+}
+
+// Load reads the configuration file at path over the defaults and validates it
+func Load(path string) (*Config, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println("ERROR: ReadSerialized was unable to read the file. (Config error)")
-		panic(err)
+		return nil, fmt.Errorf("reading configuration: %w", err)
 	}
 
-	objectJSONString := []byte(objectJSON)    //JSON string to byte array
-	json.Unmarshal(objectJSONString, &object) //JSON to Configuration
+	c := Default()
+	if err := json.Unmarshal(raw, c); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := c.validate(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return c, nil
+}
 
-	_, err = json.Marshal(&object)
-
-	if err != nil {
-		//logs.Println(err) //TO-DO
+func (c *Config) validate() error {
+	var problems []error
+	check := func(ok bool, format string, args ...any) {
+		if !ok {
+			problems = append(problems, fmt.Errorf(format, args...))
+		}
 	}
 
-	return object
+	check(c.Port > 0 && c.Port < 65536, "Port %d is not between 1 and 65535", c.Port)
+	check(c.ReadTimeout >= 0 && c.WriteTimeout >= 0 && c.IdleTimeout >= 0, "timeouts cannot be negative")
+	check(c.MaxHeaderBytes >= 0, "MaxHeaderBytes cannot be negative")
+
+	info, err := os.Stat(c.DocumentRoot)
+	check(err == nil && info.IsDir(), "DocumentRoot %q is not a directory", c.DocumentRoot)
+	for name, dir := range map[string]string{"CacheRoot": c.CacheRoot, "LogRoot": c.LogRoot, "UploadsRoot": c.UploadsRoot} {
+		check(dir != "", "%s cannot be empty", name)
+	}
+
+	c.DeniedNetworks = nil
+	for _, cidr := range c.DenyFrom {
+		_, network, err := net.ParseCIDR(cidr)
+		check(err == nil, "DenyFrom entry %q is not a CIDR range like 10.1.2.0/24", cidr)
+		if err == nil {
+			c.DeniedNetworks = append(c.DeniedNetworks, network)
+		}
+	}
+
+	switch c.LoggingLevel {
+	case "debug", "basic", "error", "errors":
+	default:
+		check(false, "LoggingLevel %q is not debug, basic or error", c.LoggingLevel)
+	}
+	check(c.SessionCookieName != "" && !strings.ContainsAny(c.SessionCookieName, " \t\r\n;,="), "SessionCookieName %q is not a valid cookie name", c.SessionCookieName)
+	check(strings.TrimSpace(c.GopHeadersSeparator) != "" && !strings.ContainsAny(c.GopHeadersSeparator, "\r\n"), "GopHeadersSeparator must be a non-empty single line")
+	if c.RateLimitEnabled {
+		check(c.RateLimitRate > 0 && c.RateLimitPeriod > 0, "RateLimitRate and RateLimitPeriod must be positive")
+	}
+
+	if c.GopKeySalt == PlaceholderSalt || c.GopKeySalt == "" {
+		c.GopKeySalt = randomSalt()
+		c.Warnings = append(c.Warnings, "GopKeySalt is not set; using a random salt for this run, so upload keys change on restart")
+	}
+
+	return errors.Join(problems...)
+}
+
+func randomSalt() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // crypto/rand does not fail on supported platforms
+	}
+	return hex.EncodeToString(b)
 }

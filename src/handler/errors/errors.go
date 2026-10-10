@@ -2,8 +2,6 @@ package errors
 
 import (
 	"html"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
 )
 
 const (
@@ -18,8 +16,8 @@ const (
 	RunFailedGopFatal
 )
 
-//Render returns an error in HTML
-func Render(errorCode int, details string) string {
+// Render returns an error page in HTML; signature is the configured ServerSignature
+func Render(signature string, errorCode int, details string) string {
 
 	var title, subtitle string
 
@@ -53,13 +51,11 @@ func Render(errorCode int, details string) string {
 		subtitle = "Oops"
 	}
 
-	logs.WriteError("errors.Render: " + title + " : " + subtitle)
-
 	template := `<!doctype html>
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>ERROR - ` + config.ServerSignature + `</title>
+	<title>ERROR - ` + signature + `</title>
 	<style>
 		body{
 			font-family: Arial, sans-serif;
@@ -101,7 +97,7 @@ func Render(errorCode int, details string) string {
 			<pre>` + html.EscapeString(subtitle) + `</pre>
 		</div>
 		<div class="signature">
-		<pre>` + config.ServerSignature + `</pre>
+		<pre>` + signature + `</pre>
 		</div>
 	</div>
 </body>

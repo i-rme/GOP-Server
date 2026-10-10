@@ -1,83 +1,134 @@
+// Package handler answers HTTP requests: scripts, directories, static files and the built-in pages.
 package handler
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
-	"pfg/src/controller"
-	"pfg/src/handler/errors"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/i-rme/gop-server/src/controller"
+	"github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/repository/filesystem"
+	"github.com/i-rme/gop-server/src/server/config"
+	"github.com/i-rme/gop-server/src/server/logs"
 )
 
-// Handle tries to handle the request
-func Handle(w http.ResponseWriter, r *http.Request) {
-
-	urlPath := GetURLPath(r) // Obtains the url from the request
-
-	if IsDenied(r) { // Check if remote IP is on the denylist
-		Denied(w, r)
-		return
-	}
-
-	if config.RateLimitEnabled {
-
-		ipAddress, _, _ := net.SplitHostPort(r.RemoteAddr) // Removes the port from the IP
-
-		if IsRateLimited(ipAddress, urlPath) { // Check if remote IP is on the denylist
-			RateLimited(w, r)
-			return
-		}
-
-		addRequestRateLimit(ipAddress)
-
-	}
-
-	if IsAlias(urlPath) { // Handle alias using Alias handler
-		Alias(w, r)
-		return
-	}
-
-	logs.WriteRequest(r.RemoteAddr, r.Method, r.Host, r.RequestURI, r.Proto)
-	w.Header().Set("Server", config.ServerSignature)
-
-	params := ParseParameters(r) // GET, POST, COOKIE, SERVER
-
-	var cached, output, _headers string
-	var status int
-
-	switch filesystem.Extension(urlPath) {
-	case ".go":
-		output, status, cached = controller.RunGo(urlPath, params)
-	case ".gop":
-		output, _headers, status, cached = controller.RunGop(urlPath, params)
-		status = AddHeaders(w, _headers, status)
-	case "":
-		output, _headers, status, cached = controller.RunIndex(urlPath, params)
-		status = AddHeaders(w, _headers, status)
-	default:
-		RunStatic(urlPath, w, r)
-	}
-
-	switch filesystem.Extension(urlPath) {
-	case ".go", ".gop", "":
-		w.Header().Set("X-Cache-Status", cached)
-		w.WriteHeader(status)
-		fmt.Fprint(w, output)
-	}
-
+// Handler serves the document root
+type Handler struct {
+	config     *config.Config
+	log        *slog.Logger
+	stats      *logs.Stats
+	controller *controller.Controller
+	limiter    *rateLimiter
+	gopInfo    string
 }
 
-// RunStatic tries to serve static files
-func RunStatic(urlPath string, w http.ResponseWriter, r *http.Request) {
-	sourcePath := config.DocumentRoot + "/" + urlPath
-
-	if !filesystem.Exists(sourcePath) {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, errors.Render(errors.NotFound, urlPath))
-	} else {
-		fs := http.FileServer(http.Dir("./" + config.DocumentRoot))
-		fs.ServeHTTP(w, r)
+// New returns a Handler for the given configuration; stats counts the requests it serves
+func New(c *config.Config, log *slog.Logger, stats *logs.Stats) *Handler {
+	return &Handler{
+		config:     c,
+		log:        log,
+		stats:      stats,
+		controller: controller.New(c, log),
+		limiter:    newRateLimiter(c.RateLimitRate, time.Duration(c.RateLimitPeriod)*time.Second),
+		gopInfo:    gopInfoPage(c),
 	}
+}
+
+// ServeHTTP handles a request for anything under the document root
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	urlPath := urlPath(r)
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	if r.URL.Path != h.config.IPDeniedScript && h.denied(ip) {
+		h.log.Error("IP address is blocked for accessing this site", "ip", ip)
+		r.URL.Path = h.config.IPDeniedScript
+		h.ServeHTTP(w, r)
+		return
+	}
+
+	if h.config.RateLimitEnabled && "/"+urlPath != h.config.RateLimitedScript && !h.limiter.allow(ip, time.Now()) {
+		h.log.Error("IP address is rate limited", "ip", ip)
+		r.URL.Path = h.config.RateLimitedScript
+		h.ServeHTTP(w, r)
+		return
+	}
+
+	if target, ok := h.alias(urlPath); ok {
+		r.URL.Path = target
+		h.ServeHTTP(w, r)
+		return
+	}
+
+	h.logRequest(r)
+	w.Header().Set("Server", h.config.ServerSignature)
+
+	params := h.parameters(r)
+
+	var output, headers, cached string
+	var status int
+
+	switch filepath.Ext(urlPath) {
+	case ".go":
+		output, status, cached = h.controller.RunGo(urlPath, params)
+	case ".gop":
+		output, headers, status, cached = h.controller.RunGop(urlPath, params)
+		status = addHeaders(w, headers, status)
+	case "":
+		output, headers, status, cached = h.controller.RunIndex(urlPath, params)
+		status = addHeaders(w, headers, status)
+	default:
+		h.serveStatic(w, r, urlPath)
+		return
+	}
+
+	w.Header().Set("X-Cache-Status", cached)
+	w.WriteHeader(status)
+	fmt.Fprint(w, output)
+}
+
+// denied reports whether ip is in one of the DenyFrom ranges
+func (h *Handler) denied(ip string) bool {
+	parsed := net.ParseIP(ip)
+	for _, network := range h.config.DeniedNetworks {
+		if network.Contains(parsed) {
+			return true
+		}
+	}
+	return false
+}
+
+// alias returns the script an aliased URL path maps to
+func (h *Handler) alias(urlPath string) (string, bool) {
+	for prefix, target := range h.config.Aliases {
+		if strings.HasPrefix("/"+urlPath, prefix) {
+			return target, true
+		}
+	}
+	return "", false
+}
+
+// serveStatic serves a file from the document root
+func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, urlPath string) {
+	if !filesystem.Exists(filepath.Join(h.config.DocumentRoot, urlPath)) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, errors.Render(h.config.ServerSignature, errors.NotFound, urlPath))
+		return
+	}
+	http.FileServer(http.Dir(h.config.DocumentRoot)).ServeHTTP(w, r)
+}
+
+// logRequest logs a request and counts it for the status page
+func (h *Handler) logRequest(r *http.Request) {
+	h.log.Info("request", "remote", r.RemoteAddr, "method", r.Method, "url", r.Host+r.RequestURI, "proto", r.Proto)
+	h.stats.Add(time.Now())
+}
+
+// urlPath is the request path without its leading slash
+func urlPath(r *http.Request) string {
+	return strings.TrimPrefix(r.URL.Path, "/")
 }

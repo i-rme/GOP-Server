@@ -2,46 +2,39 @@ package controller
 
 import (
 	"net/http"
-	"pfg/src/handler/errors"
-	"pfg/src/repository/cache"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
-	"pfg/src/worker"
+	"path/filepath"
+
+	"github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/repository/filesystem"
+	"github.com/i-rme/gop-server/src/worker"
 )
 
-// RunGo builds and returns a .go file and a http status code
-func RunGo(urlPath, parameters string) (string, int, string) {
-	sourcePath := config.DocumentRoot + "/" + urlPath
+// RunGo builds and runs a .go file, returning its output, an HTTP status and the cache status
+func (c *Controller) RunGo(urlPath, parameters string) (string, int, string) {
+	sourcePath := filepath.Join(c.config.DocumentRoot, urlPath)
 
 	if !filesystem.Exists(sourcePath) {
-		return errors.Render(errors.NotFound, urlPath), http.StatusNotFound, "MISS"
+		return c.errorPage(errors.NotFound, urlPath), http.StatusNotFound, "MISS"
 	}
 
-	cacheFile := cache.GetIfFresh(sourcePath)
+	binary := c.cache.GetIfFresh(sourcePath)
+	if binary == "" {
+		c.log.Debug("building", "script", sourcePath)
 
-	if cacheFile == "" { //File not cached
-		logs.WriteDebug("The file is not on the cache. Building...")
-
-		buildOutput, workingDirectory, buildOk := worker.BuildAndRun(sourcePath, parameters)
-
-		if !buildOk {
-			return errors.Render(errors.BuildFailedGoCompilation, buildOutput), http.StatusInternalServerError, "MISS"
+		output, workDir, err := worker.BuildAndRun(sourcePath, parameters)
+		if err != nil {
+			return c.errorPage(errors.BuildFailedGoCompilation, output), http.StatusInternalServerError, "MISS"
 		}
-
-		cache.Put(sourcePath, workingDirectory, sourcePath)
-
-		return buildOutput, http.StatusOK, "MISS"
-
+		c.cache.Put(sourcePath, workDir, sourcePath)
+		return output, http.StatusOK, "MISS"
 	}
 
-	//File cached
-	output, runOk := worker.Run(cacheFile, parameters, 6)
-
-	if !runOk {
-		return errors.Render(errors.RunFailedGoFatal, output), http.StatusInternalServerError, "MISS"
+	output, err := worker.Run(binary, parameters, executionTimeout, c.config.RunScriptsAsNobody)
+	if err == worker.ErrTimeout {
+		return c.errorPage(errors.ExecutionTimeout, binary), http.StatusInternalServerError, "MISS"
 	}
-
+	if err != nil {
+		return c.errorPage(errors.RunFailedGoFatal, output), http.StatusInternalServerError, "MISS"
+	}
 	return output, http.StatusOK, "HIT"
-
 }

@@ -1,64 +1,39 @@
+// Package logs sets up the server log and counts recent requests for the status page.
 package logs
 
 import (
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"os"
-	"pfg/src/server/config"
+	"path/filepath"
 	"time"
 )
 
-var (
-	//Log is used to store in filesystem
-	Log *log.Logger
-)
-
-func init() {
-
-	time := time.Now()
-	timeformat := time.Format("2006.01.02_15.04.05") // Defines time format for file name
-
-	var logpath = config.LogRoot + "/" + timeformat + ".log"
-	var logfile, err = os.Create(logpath)
-
+// New returns a logger writing to stdout and to a new file in dir named after the
+// current time. level is the configured LoggingLevel: debug, basic or error.
+func New(dir, level string) (*slog.Logger, io.Closer, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, nil, err
+	}
+	name := filepath.Join(dir, time.Now().Format("2006.01.02_15.04.05")+".log")
+	file, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
-		panic(err) //TO-DO Handle error
+		return nil, nil, fmt.Errorf("creating log file: %w", err)
 	}
-	Log = log.New(logfile, "", 0) // Defines the log
+
+	handler := slog.NewTextHandler(io.MultiWriter(os.Stdout, file), &slog.HandlerOptions{Level: Level(level)})
+	return slog.New(handler), file, nil
 }
 
-// write proceeds to write to log
-func write(line string) {
-	fmt.Println(line)
-	Log.Println(line)
-}
-
-// WriteDebug proceeds to write debug messages to log
-func WriteDebug(line string) {
-	if config.LoggingLevel == "debug" {
-		write("DEBUG " + line)
+// Level maps a LoggingLevel to the lowest slog level it shows
+func Level(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "basic":
+		return slog.LevelInfo
+	default:
+		return slog.LevelError
 	}
-}
-
-// WriteBasic proceeds to write debug messages to log
-func WriteBasic(line string) {
-	if config.LoggingLevel == "basic" || config.LoggingLevel == "debug" {
-		write("INFO " + line)
-	}
-}
-
-// WriteError proceeds to write debug messages to log
-func WriteError(line string) {
-	write("ERROR " + line)
-}
-
-// WriteRequest proceeds to write a request in the log
-func WriteRequest(remoteAddr, method, host, requestURI, proto string) {
-	WriteBasic(`<< ` + remoteAddr + ` - - [` + time.Now().Truncate(0).String() + `] "` + method + ` ` + host + requestURI + ` ` + proto + `"`)
-	addRequest()
-}
-
-// WriteResponse proceeds to write a response in the log
-func WriteResponse(remoteAddr, localAddr, executionTime string) {
-	WriteDebug(`>> ` + remoteAddr + " was served by " + localAddr + " in " + executionTime)
 }

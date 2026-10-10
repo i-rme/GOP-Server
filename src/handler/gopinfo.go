@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"html"
 	"net/http"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
 	"strconv"
+
+	"github.com/i-rme/gop-server/src/server/config"
 )
 
-var gopInfo string
-
-func init() {
-	gopInfo = `<!doctype html>
+// gopInfoPage renders the /gop-info/ page
+func gopInfoPage(config *config.Config) string {
+	return `<!doctype html>
 	<html lang="en">
 	<head>
 		<meta charset="utf-8">
@@ -99,12 +98,10 @@ func init() {
 </html>`
 }
 
-// GopInfo tries to handle the request
-func GopInfo(w http.ResponseWriter, r *http.Request) {
-
-	logs.WriteRequest(r.RemoteAddr, r.Method, r.Host, r.RequestURI, r.Proto)
-	w.Header().Set("Server", config.ServerSignature)
+// GopInfo serves the /gop-info/ page
+func (h *Handler) GopInfo(w http.ResponseWriter, r *http.Request) {
+	h.logRequest(r)
+	w.Header().Set("Server", h.config.ServerSignature)
 	w.Header().Add("Content-Type", "text/html")
-	fmt.Fprint(w, gopInfo)
-
+	fmt.Fprint(w, h.gopInfo)
 }

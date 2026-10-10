@@ -5,41 +5,36 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/i-rme/gop-server/src/repository/filesystem"
 )
 
-// ParseParameters extracts GET, POST & Cookie parameters from a request, then returns them as JSON
-func ParseParameters(r *http.Request) string {
+// parameters extracts GET, POST & Cookie parameters from a request, then returns them as JSON
+func (h *Handler) parameters(r *http.Request) string {
 	r.ParseForm() //ParseForm populates r.Form and r.PostForm. (GET and POST parameters)
 
 	GET := parseGET(r) //TO-DO Remove POST parameters from GET, as both are included
 	POST := parsePOST(r)
 	COOKIE := parseCOOKIE(r)
-	SERVER := parseSERVER(r)
-	SESSION := parseSESSION(r)
+	SERVER := h.parseSERVER(r)
+	SESSION := h.parseSESSION(r)
 	HEADER := parseHEADER(r)
 
-	parseMULTIPARTS(r)
+	h.parseMULTIPARTS(r)
 
 	parameters := []map[string]string{GET, POST, COOKIE, SERVER, SESSION, HEADER}
 	parametersJSON, _ := json.Marshal(parameters) //Parse GET map as a JSON byte[]
 
 	return string(parametersJSON)
-}
-
-// GetURLPath extracts the URL path from a request, returns it as string
-func GetURLPath(r *http.Request) string {
-	return r.URL.Path[1:]
 }
 
 // parseGET extracts GET parameters from a request, then returns them as map
@@ -79,7 +74,7 @@ func parseCOOKIE(r *http.Request) map[string]string {
 }
 
 // parseSERVER prepares SERVER parameters, then returns them as JSON
-func parseSERVER(r *http.Request) map[string]string {
+func (h *Handler) parseSERVER(r *http.Request) map[string]string {
 
 	_map := make(map[string]string) // Creating empty map
 
@@ -90,45 +85,45 @@ func parseSERVER(r *http.Request) map[string]string {
 	ip, port, _ := net.SplitHostPort(r.RemoteAddr) // Removes the port from the IP
 
 	if runtime.GOOS == "windows" { //Reverse slashes if Windows is detected
-		_map["DOCUMENT_ROOT"] = currentPath + "\\" + config.DocumentRoot
-		_map["SCRIPT_PATH"] = currentPath + "\\" + config.DocumentRoot + "\\" + filesystem.Directory(GetURLPath(r))
+		_map["DOCUMENT_ROOT"] = currentPath + "\\" + h.config.DocumentRoot
+		_map["SCRIPT_PATH"] = currentPath + "\\" + h.config.DocumentRoot + "\\" + filesystem.Directory(urlPath(r))
 		_map["CURRENT_PATH"] = currentPath
 	} else {
-		_map["DOCUMENT_ROOT"] = currentPath + "/" + config.DocumentRoot
-		_map["SCRIPT_PATH"] = currentPath + "/" + config.DocumentRoot + "/" + filesystem.Directory(GetURLPath(r))
+		_map["DOCUMENT_ROOT"] = currentPath + "/" + h.config.DocumentRoot
+		_map["SCRIPT_PATH"] = currentPath + "/" + h.config.DocumentRoot + "/" + filesystem.Directory(urlPath(r))
 		_map["CURRENT_PATH"] = "/" + currentPath
 	}
 
-	_map["DOCUMENT_ROOT_RELATIVE"] = config.DocumentRoot
-	_map["SCRIPT_PATH_RELATIVE"] = "/" + filesystem.Directory(GetURLPath(r))
-	_map["GOP_SELF"] = GetURLPath(r)
+	_map["DOCUMENT_ROOT_RELATIVE"] = h.config.DocumentRoot
+	_map["SCRIPT_PATH_RELATIVE"] = "/" + filesystem.Directory(urlPath(r))
+	_map["GOP_SELF"] = urlPath(r)
 	_map["HTTP_REFERER"] = r.Referer()
 	_map["HTTP_USER_AGENT"] = r.UserAgent()
 	_map["REMOTE_ADDR"] = ip
 	_map["REMOTE_PORT"] = port
 	_map["REQUEST_METHOD"] = r.Method
-	_map["SCRIPT_NAME"] = GetURLPath(r)
-	_map["SCRIPT_BASENAME"] = filesystem.Basename(GetURLPath(r))
+	_map["SCRIPT_NAME"] = urlPath(r)
+	_map["SCRIPT_BASENAME"] = filepath.Base(urlPath(r))
 	_map["SERVER_NAME"] = r.Host
 	_map["SERVER_PROTOCOL"] = r.Proto
 	_map["REQUEST_URI"] = parsedURI.String()
 	_map["REQUEST_PATH"] = parsedURI.Path
 	_map["RAW_QUERY"] = parsedURI.RawQuery
-	_map["FILE_UPLOAD_KEY"] = Sha256(r.Host + r.UserAgent() + GetURLPath(r) + config.GopKeySalt)
-	_map["SIGNATURE"] = config.ServerSignature
-	_map["SESSION_COOKIE_NAME"] = config.SessionCookieName
-	_map["LOGGING_LEVEL"] = config.LoggingLevel
+	_map["FILE_UPLOAD_KEY"] = h.fileUploadKey(r)
+	_map["SIGNATURE"] = h.config.ServerSignature
+	_map["SESSION_COOKIE_NAME"] = h.config.SessionCookieName
+	_map["LOGGING_LEVEL"] = h.config.LoggingLevel
 
 	return _map
 }
 
 // parseSESSION prepares SERVER parameters, then returns them as JSON
-func parseSESSION(r *http.Request) map[string]string {
+func (h *Handler) parseSESSION(r *http.Request) map[string]string {
 
 	var SESSION = make(map[string]string) // Prepares the slice of maps variable containing all the parameters
 
 	for _, cookie := range r.Cookies() {
-		if cookie.Name == config.SessionCookieName {
+		if cookie.Name == h.config.SessionCookieName {
 			sessionEncoded := cookie.Value
 			sessionJSON, _ := base64.StdEncoding.DecodeString(sessionEncoded)
 
@@ -153,12 +148,12 @@ func parseHEADER(r *http.Request) map[string]string {
 }
 
 // parseMULTIPARTS extracts MultipartForm parameters from a request, then returns them
-func parseMULTIPARTS(r *http.Request) {
+func (h *Handler) parseMULTIPARTS(r *http.Request) {
 
 	if r.Method == "POST" {
 		r.ParseMultipartForm(1 << 20) // upload file size maximum: 1MB
 
-		fileUploadKey := Sha256(r.Host + r.UserAgent() + GetURLPath(r) + config.GopKeySalt)
+		fileUploadKey := h.fileUploadKey(r)
 
 		file, handler, err := r.FormFile(fileUploadKey)
 		if err != nil {
@@ -166,28 +161,25 @@ func parseMULTIPARTS(r *http.Request) {
 		}
 		defer file.Close()
 
-		logs.WriteBasic("A file was uploaded: " + handler.Filename)
-		logs.WriteDebug("Mime Header:" + fmt.Sprint(handler.Header) + ", File Size: " + strconv.FormatInt(handler.Size, 10) + " bytes")
+		h.log.Info("file uploaded", "name", handler.Filename, "size", handler.Size, "header", handler.Header)
 
-		tempFile, err := ioutil.TempFile(config.UploadsRoot, fileUploadKey+"_*_"+handler.Filename)
+		tempFile, err := os.CreateTemp(h.config.UploadsRoot, fileUploadKey+"_*_"+handler.Filename)
 		if err != nil {
-			fmt.Println(err)
+			h.log.Error("saving upload", "error", err)
+			return
 		}
 		defer tempFile.Close()
 
-		fileBytes, err := ioutil.ReadAll(file)
-		if err != nil {
-			fmt.Println(err)
+		if _, err := io.Copy(tempFile, file); err != nil {
+			h.log.Error("saving upload", "error", err)
 		}
-
-		tempFile.Write(fileBytes)
 
 	}
 
 }
 
-// AddHeaders includes headers in the writer
-func AddHeaders(w http.ResponseWriter, _headers string, status int) int {
+// addHeaders sets the headers a script printed and returns the status it chose, if any
+func addHeaders(w http.ResponseWriter, _headers string, status int) int {
 	headers := make([]string, 0)           // Prepares the slice
 	headersBytes := []byte(_headers)       // JSON string to byte array
 	json.Unmarshal(headersBytes, &headers) // JSON to slice of maps
@@ -205,10 +197,7 @@ func AddHeaders(w http.ResponseWriter, _headers string, status int) int {
 	return status
 }
 
-// Sha256 computes the hash of the input
-func Sha256(input string) string {
-	sum := sha256.Sum256([]byte(input))
-	hash := fmt.Sprintf("%x", sum)
-
-	return hash
+// fileUploadKey is the form field name a request's script accepts an upload under
+func (h *Handler) fileUploadKey(r *http.Request) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(r.Host+r.UserAgent()+urlPath(r)+h.config.GopKeySalt)))
 }

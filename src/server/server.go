@@ -1,65 +1,93 @@
+// Package server wires the handlers into an http.Server.
 package server
 
 import (
-	"fmt"
-	"log"
+	"context"
+	"errors"
+	"log/slog"
 	"net"
 	"net/http"
-	"pfg/src/handler"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
+	"os"
+	"strconv"
 	"time"
+
+	"github.com/i-rme/gop-server/src/handler"
+	"github.com/i-rme/gop-server/src/repository/filesystem"
+	"github.com/i-rme/gop-server/src/server/config"
+	"github.com/i-rme/gop-server/src/server/logs"
 )
 
-var lastTimestamp time.Time
+// shutdownTimeout is how long requests in flight get to finish on shutdown
+const shutdownTimeout = 10 * time.Second
 
-func init() {
-	filesystem.RemoveCache(config.CacheRoot)
-	lastTimestamp = time.Now()
+// Server is a configured GOP server, ready to Run
+type Server struct {
+	http *http.Server
+	log  *slog.Logger
 }
 
-// stateCallback is called when the state of a request changes
-func stateCallback(conn net.Conn, ConnState http.ConnState) {
-
-	currentTime := time.Now()
-	elapsedTime := time.Since(lastTimestamp)
-	lastTimestamp = currentTime //Updates timestamp for subsequent requests
-	timeSpent := fmt.Sprint(elapsedTime.Milliseconds()) + "ms"
-
-	switch ConnState {
-	case http.StateNew:
-		//fmt.Println("StateNew")
-	case http.StateActive:
-		//fmt.Println("StateActive")
-	case http.StateIdle:
-		logs.WriteResponse(conn.RemoteAddr().String(), conn.LocalAddr().String(), timeSpent)
-	case http.StateHijacked:
-		//fmt.Println("StateHijacked")
-	case http.StateClosed:
-		//fmt.Println("StateClosed")
+// New prepares the server's directories and routes
+func New(c *config.Config, log *slog.Logger) (*Server, error) {
+	if err := filesystem.ResetDir(c.CacheRoot); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(c.UploadsRoot, 0o755); err != nil {
+		return nil, err
 	}
 
+	h := handler.New(c, log, &logs.Stats{})
+	mux := http.NewServeMux()
+	mux.Handle("/", h)
+	mux.HandleFunc("/server-status/", h.ServerStatus)
+	mux.HandleFunc("/gop-info/", h.GopInfo)
+
+	return &Server{
+		log: log,
+		http: &http.Server{
+			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(c.Port)),
+			Handler:        timed(mux, log),
+			ReadTimeout:    time.Duration(c.ReadTimeout),
+			WriteTimeout:   time.Duration(c.WriteTimeout),
+			IdleTimeout:    time.Duration(c.IdleTimeout),
+			MaxHeaderBytes: c.MaxHeaderBytes,
+			ErrorLog:       slog.NewLogLogger(log.Handler(), slog.LevelError),
+		},
+	}, nil
 }
 
-// Start innitiates the server
-func Start() {
-	connectionString := fmt.Sprintf("%s%s%d", config.Address, ":", config.Port) //Formatting the connection, adding colon (:)
-
-	server := &http.Server{
-		Addr:           connectionString,
-		Handler:        nil,
-		ReadTimeout:    config.ReadTimeout,
-		WriteTimeout:   config.WriteTimeout,
-		IdleTimeout:    config.IdleTimeout,
-		MaxHeaderBytes: config.MaxHeaderBytes,
-		ConnState:      stateCallback,
-		//TO-DO ErrorLog
+// Run serves until ctx is done, then lets requests in flight finish
+func (s *Server) Run(ctx context.Context) error {
+	listener, err := net.Listen("tcp", s.http.Addr)
+	if err != nil {
+		return err
 	}
+	s.log.Info("server started", "url", "http://"+s.http.Addr)
 
-	logs.WriteBasic("Golang server started on http://" + connectionString + " [" + time.Now().Truncate(0).String() + "]")
-	http.HandleFunc("/", handler.Handle)
-	http.HandleFunc("/server-status/", handler.ServerStatus)
-	http.HandleFunc("/gop-info/", handler.GopInfo)
-	log.Fatal(server.ListenAndServe()) //log.Fatal will tell if we cant bind the port
+	served := make(chan error, 1)
+	go func() { served <- s.http.Serve(listener) }()
+
+	select {
+	case err := <-served:
+		return err
+	case <-ctx.Done():
+	}
+	s.log.Info("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := s.http.Shutdown(shutdownCtx); err != nil {
+		return err
+	}
+	if err := <-served; !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+// timed logs how long each request took
+func timed(next http.Handler, log *slog.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		log.Debug("served", "remote", r.RemoteAddr, "path", r.URL.Path, "duration", time.Since(start))
+	})
 }

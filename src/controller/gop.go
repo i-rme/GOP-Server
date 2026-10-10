@@ -2,66 +2,72 @@ package controller
 
 import (
 	"net/http"
-	"pfg/src/handler/errors"
-	"pfg/src/parser"
-	"pfg/src/repository/cache"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
-	"pfg/src/worker"
+	"os"
+	"path/filepath"
+
+	"github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/parser"
+	"github.com/i-rme/gop-server/src/repository/filesystem"
+	"github.com/i-rme/gop-server/src/worker"
 )
 
-// RunGop builds and returns a .gop file and a http status code
-func RunGop(urlPath, parameters string) (string, string, int, string) {
-	sourcePath := config.DocumentRoot + "/" + urlPath
+// RunGop builds and runs a .gop file, returning its output, the headers it set as JSON,
+// an HTTP status and the cache status
+func (c *Controller) RunGop(urlPath, parameters string) (string, string, int, string) {
+	sourcePath := filepath.Join(c.config.DocumentRoot, urlPath)
 
 	if !filesystem.Exists(sourcePath) {
-		return errors.Render(errors.NotFound, urlPath), "[]", http.StatusNotFound, "MISS"
+		return c.errorPage(errors.NotFound, urlPath), "[]", http.StatusNotFound, "MISS"
 	}
 
-	cacheFile := cache.GetIfFresh(sourcePath)
-
-	if cacheFile == "" { //File not cached
-		logs.WriteDebug("The file is not on the cache. Building...")
+	binary := c.cache.GetIfFresh(sourcePath)
+	if binary == "" {
+		c.log.Debug("building", "script", sourcePath)
 
 		program, err := parser.Process(sourcePath, parser.Options{
-			MySQL:             config.MySQLSupportEnabled,
-			SessionCookieName: config.SessionCookieName,
-			HeadersSeparator:  config.GopHeadersSeparator,
+			MySQL:             c.config.MySQLSupportEnabled,
+			SessionCookieName: c.config.SessionCookieName,
+			HeadersSeparator:  c.config.GopHeadersSeparator,
 		})
 		if err != nil {
-			return errors.Render(errors.BuildFailedParsing, err.Error()), "[]", http.StatusInternalServerError, "MISS"
+			return c.errorPage(errors.BuildFailedParsing, err.Error()), "[]", http.StatusInternalServerError, "MISS"
 		}
-		tempFilePath := filesystem.WriteTemp(config.CacheRoot, program.Source)
+		tempPath, err := filesystem.WriteTemp(c.config.CacheRoot, "temp-*.go", program.Source)
+		if err != nil {
+			return c.errorPage(errors.BuildFailedGopCompilationFatal, err.Error()), "[]", http.StatusInternalServerError, "MISS"
+		}
+		defer os.Remove(tempPath)
 
-		combinedOutput, workingDirectory, buildOk := worker.BuildAndRun(tempFilePath, parameters)
-
-		if !buildOk {
-
-			if workingDirectory == "" {
-				return errors.Render(errors.BuildFailedGopCompilationFatal, combinedOutput), "[]", http.StatusInternalServerError, "MISS"
+		combined, workDir, err := worker.BuildAndRun(tempPath, parameters)
+		if err != nil {
+			if workDir == "" {
+				return c.errorPage(errors.BuildFailedGopCompilationFatal, combined), "[]", http.StatusInternalServerError, "MISS"
 			}
-
-			return errors.Render(errors.BuildFailedGopCompilationSource, combinedOutput), "[]", http.StatusInternalServerError, "MISS"
+			return c.errorPage(errors.BuildFailedGopCompilationSource, combined), "[]", http.StatusInternalServerError, "MISS"
 		}
+		c.cache.Put(sourcePath, workDir, tempPath)
 
-		cache.Put(sourcePath, workingDirectory, tempFilePath)
-		filesystem.Remove(tempFilePath)
-
-		buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput, config.GopHeadersSeparator)
-
-		return buildOutput, headersOutput, http.StatusOK, "MISS"
-
+		output, headers := parser.SplitOutputAndHeaders(combined, c.config.GopHeadersSeparator)
+		return output, headers, http.StatusOK, "MISS"
 	}
 
-	//File cached
-	combinedOutput, runOk := worker.Run(cacheFile, parameters, 6)
-
-	if !runOk {
-		return errors.Render(errors.RunFailedGopFatal, combinedOutput), "[]", http.StatusInternalServerError, "MISS"
+	combined, err := worker.Run(binary, parameters, executionTimeout, c.config.RunScriptsAsNobody)
+	if err == worker.ErrTimeout {
+		return c.errorPage(errors.ExecutionTimeout, binary), "[]", http.StatusInternalServerError, "MISS"
 	}
+	if err != nil {
+		return c.errorPage(errors.RunFailedGopFatal, combined), "[]", http.StatusInternalServerError, "MISS"
+	}
+	output, headers := parser.SplitOutputAndHeaders(combined, c.config.GopHeadersSeparator)
+	return output, headers, http.StatusOK, "HIT"
+}
 
-	buildOutput, headersOutput := parser.SplitOutputAndHeaders(combinedOutput, config.GopHeadersSeparator)
-	return buildOutput, headersOutput, http.StatusOK, "HIT"
+// RunIndex runs a directory's index.gop, or the directory listing script when it has none
+func (c *Controller) RunIndex(urlPath, parameters string) (string, string, int, string) {
+	directory := filepath.Join(c.config.DocumentRoot, urlPath)
 
+	if !filesystem.Exists(filepath.Join(directory, "index.gop")) && filesystem.DirectoryExists(directory) {
+		return c.RunGop(c.config.DirectoryListingScript, parameters)
+	}
+	return c.RunGop(urlPath+"/index.gop", parameters)
 }
