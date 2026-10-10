@@ -2,6 +2,7 @@ package worker
 
 import (
 	"errors"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -98,3 +99,15 @@ func TestRelativeMessages(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestCappedThroughCopy(t *testing.T) {
+	var c capped
+	n, err := io.Copy(&c, io.LimitReader(zeros{}, maxOutput+1000))
+	if err != nil || n != maxOutput+1000 || len(c.String()) != maxOutput {
+		t.Errorf("copied %d, kept %d, err %v", n, len(c.String()), err)
+	}
+}
+
+type zeros struct{}
+
+func (zeros) Read(p []byte) (int, error) { clear(p); return len(p), nil }
