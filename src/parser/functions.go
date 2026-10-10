@@ -1,6 +1,6 @@
 package parser
 
-import "pfg/src/server/config"
+import "strconv"
 
 var publicFunctions = `
 //Public Methods
@@ -103,12 +103,13 @@ func substr(string string, start, end int) string{
 }
 `
 
-var privateFunctions = `
+func privateFunctions(options Options) string {
+	return `
 //Private Methods
 func __session_call() {
 	if __sessionActive {
 		sessionJSON, _ := json.Marshal(_SESSION) //Parse SESSION map as a JSON byte[]
-		_setcookie("` + config.SessionCookieName + `", base64.StdEncoding.EncodeToString(sessionJSON))
+		_setcookie(` + strconv.Quote(options.SessionCookieName) + `, base64.StdEncoding.EncodeToString(sessionJSON))
 	}
 }
 func __housekeeping() {
@@ -132,7 +133,7 @@ func __housekeeping() {
 
 	// Required to pass headers to the controller
 	_headersJSON, _ := json.Marshal(__responseHeader)
-	fmt.Println("` + config.GopHeadersSeparator + `", string(_headersJSON))
+	fmt.Println(` + strconv.Quote(options.HeadersSeparator) + `, string(_headersJSON))
 }
 
 //TO-DO Move it
@@ -157,6 +158,7 @@ func splitByColon(input string) (string, string) {
 	return match[1], match[2]
 }
 `
+}
 
 var mysqlFunctions = `
 //Public MySQL Methods
