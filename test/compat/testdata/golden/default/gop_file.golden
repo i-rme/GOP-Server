@@ -1,0 +1,14 @@
+=== GET /examples/gop_file.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>Your beautiful page goes here</h2>
+=== GET /examples/gop_file.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>Your beautiful page goes here</h2>

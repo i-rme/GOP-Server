@@ -1,0 +1,48 @@
+=== GET /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>GET was used</h3>
+=== POST /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>POST was used</h3>
+=== PUT /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>PUT was used</h3>
+=== PATCH /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>PATCH was used</h3>
+=== DELETE /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>DELETE was used</h3>
+=== OPTIONS /examples/gop_file_methods.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This script can recognize between multiple request methods:</h2>
+<h3>UNKNOWN METHOD was used</h3>

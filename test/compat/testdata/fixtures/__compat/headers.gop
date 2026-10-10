@@ -1,0 +1,5 @@
+<!go
+
+fmt.Println("_HEADER:", _HEADER)
+fmt.Println("X-Custom-Header:", _HEADER["X-Custom-Header"])
+fmt.Println("_COOKIE:", _COOKIE)

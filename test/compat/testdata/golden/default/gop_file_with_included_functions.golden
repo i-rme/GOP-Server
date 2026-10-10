@@ -1,0 +1,20 @@
+=== GET /examples/gop_file_with_included_functions.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+&lt;h1&gt;Escaped string&lt;/h1&gt;
+<br>1<br>2<br>3<br>4
+Prueba test 123
+\ no newline at end of body
+=== GET /examples/gop_file_with_included_functions.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+&lt;h1&gt;Escaped string&lt;/h1&gt;
+<br>1<br>2<br>3<br>4
+Prueba test 123
+\ no newline at end of body

@@ -1,0 +1,49 @@
+=== GET /examples/gop_file_server.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>This should work</h2>
+<br/> The value of _SERVER["GOP_SELF"]:  examples/gop_file_server.gop
+<br/> The value of _SERVER["HTTP_REFERER"]:  
+<br/> The value of _SERVER["HTTP_USER_AGENT"]:  gop-compat/1
+<br/> The value of _SERVER["REMOTE_ADDR"]:  127.0.0.1
+<br/> The value of _SERVER["REQUEST_METHOD"]:  GET
+<br/> The value of _SERVER["REQUEST_URI"]:  /examples/gop_file_server.gop
+<br/> The value of _SERVER["SCRIPT_NAME"]:  examples/gop_file_server.gop
+<br/> The value of _SERVER["SCRIPT_BASENAME"]:  gop_file_server.gop
+<br/> The value of _SERVER["SERVER_NAME"]:  {{HOST}}
+<br/> The value of _SERVER["SERVER_PROTOCOL"]:  HTTP/1.1
+<br/>
+<br/> The value of _SERVER["DOCUMENT_ROOT"]:  {{ROOT}}/public
+<br/> The value of _SERVER["SCRIPT_PATH"]:  {{ROOT}}/public/examples
+<br/> The value of _SERVER["SCRIPT_PATH_RELATIVE"]:  /examples
+<br/> The value of _SERVER["CURRENT_PATH"]:  /{{ROOT}}
+<br/><br/>
+The value of the _SERVER map:  map[CURRENT_PATH:/{{ROOT}} DOCUMENT_ROOT:{{ROOT}}/public DOCUMENT_ROOT_RELATIVE:public FILE_UPLOAD_KEY:{{SHA256}} GOP_SELF:examples/gop_file_server.gop HTTP_REFERER: HTTP_USER_AGENT:gop-compat/1 LOGGING_LEVEL:debug RAW_QUERY: REMOTE_ADDR:127.0.0.1 REMOTE_PORT:{{REMOTE_PORT}} REQUEST_METHOD:GET REQUEST_PATH:/examples/gop_file_server.gop REQUEST_URI:/examples/gop_file_server.gop SCRIPT_BASENAME:gop_file_server.gop SCRIPT_NAME:examples/gop_file_server.gop SCRIPT_PATH:{{ROOT}}/public/examples SCRIPT_PATH_RELATIVE:/examples SERVER_NAME:{{HOST}} SERVER_PROTOCOL:HTTP/1.1 SESSION_COOKIE_NAME:GopSession SIGNATURE:Golang Preprocessor for Web Services v1.0]
+=== GET /examples/gop_file_server.gop?x=1&y=two
+> Referer: http://example.test/from
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>This should work</h2>
+<br/> The value of _SERVER["GOP_SELF"]:  examples/gop_file_server.gop
+<br/> The value of _SERVER["HTTP_REFERER"]:  http://example.test/from
+<br/> The value of _SERVER["HTTP_USER_AGENT"]:  gop-compat/1
+<br/> The value of _SERVER["REMOTE_ADDR"]:  127.0.0.1
+<br/> The value of _SERVER["REQUEST_METHOD"]:  GET
+<br/> The value of _SERVER["REQUEST_URI"]:  /examples/gop_file_server.gop?x=1&y=two
+<br/> The value of _SERVER["SCRIPT_NAME"]:  examples/gop_file_server.gop
+<br/> The value of _SERVER["SCRIPT_BASENAME"]:  gop_file_server.gop
+<br/> The value of _SERVER["SERVER_NAME"]:  {{HOST}}
+<br/> The value of _SERVER["SERVER_PROTOCOL"]:  HTTP/1.1
+<br/>
+<br/> The value of _SERVER["DOCUMENT_ROOT"]:  {{ROOT}}/public
+<br/> The value of _SERVER["SCRIPT_PATH"]:  {{ROOT}}/public/examples
+<br/> The value of _SERVER["SCRIPT_PATH_RELATIVE"]:  /examples
+<br/> The value of _SERVER["CURRENT_PATH"]:  /{{ROOT}}
+<br/><br/>
+The value of the _SERVER map:  map[CURRENT_PATH:/{{ROOT}} DOCUMENT_ROOT:{{ROOT}}/public DOCUMENT_ROOT_RELATIVE:public FILE_UPLOAD_KEY:{{SHA256}} GOP_SELF:examples/gop_file_server.gop HTTP_REFERER:http://example.test/from HTTP_USER_AGENT:gop-compat/1 LOGGING_LEVEL:debug RAW_QUERY:x=1&y=two REMOTE_ADDR:127.0.0.1 REMOTE_PORT:{{REMOTE_PORT}} REQUEST_METHOD:GET REQUEST_PATH:/examples/gop_file_server.gop REQUEST_URI:/examples/gop_file_server.gop?x=1&y=two SCRIPT_BASENAME:gop_file_server.gop SCRIPT_NAME:examples/gop_file_server.gop SCRIPT_PATH:{{ROOT}}/public/examples SCRIPT_PATH_RELATIVE:/examples SERVER_NAME:{{HOST}} SERVER_PROTOCOL:HTTP/1.1 SESSION_COOKIE_NAME:GopSession SIGNATURE:Golang Preprocessor for Web Services v1.0]

@@ -1,0 +1,73 @@
+=== GET /examples/gop_sessions.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Set-Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=
+X-Cache-Status: MISS
+
+<h2>Sessions</h2>
+<br/><br/>
+The value of the _COOKIE map:  map[]
+<br/><br/>
+The value of the _SESSION map:  map[]
+<h2>After</h2>
+<br/><br/>
+The value of the _SESSION map:  map[a1:example b2:second example]
+=== GET /examples/gop_sessions.gop
+> Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Set-Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=
+X-Cache-Status: HIT
+
+<h2>Sessions</h2>
+<br/><br/>
+The value of the _COOKIE map:  map[GopSession:eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=]
+<br/><br/>
+The value of the _SESSION map:  map[a1:example b2:second example]
+<h2>After</h2>
+<br/><br/>
+The value of the _SESSION map:  map[a1:example b2:second example]
+=== GET /examples/gop_sessions.gop
+> Cookie: GopSession=eyJhZG1pbiI6InllcyJ9; other=1
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Set-Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJhZG1pbiI6InllcyIsImIyIjoic2Vjb25kIGV4YW1wbGUifQ==
+X-Cache-Status: HIT
+
+<h2>Sessions</h2>
+<br/><br/>
+The value of the _COOKIE map:  map[GopSession:eyJhZG1pbiI6InllcyJ9 other:1]
+<br/><br/>
+The value of the _SESSION map:  map[admin:yes]
+<h2>After</h2>
+<br/><br/>
+The value of the _SESSION map:  map[a1:example admin:yes b2:second example]
+=== GET /examples/gop_sessions.gop
+> Cookie: GopSession=not-base64!
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Set-Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=
+X-Cache-Status: HIT
+
+<h2>Sessions</h2>
+<br/><br/>
+The value of the _COOKIE map:  map[GopSession:not-base64!]
+<br/><br/>
+The value of the _SESSION map:  map[]
+<h2>After</h2>
+<br/><br/>
+The value of the _SESSION map:  map[a1:example b2:second example]
+=== GET /__compat/session_destroy.gop
+> Cookie: GopSession=eyJhMSI6ImV4YW1wbGUiLCJiMiI6InNlY29uZCBleGFtcGxlIn0=
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+Set-Cookie: GopSession=eyJvbmx5IjoidGhpcyJ9
+X-Cache-Status: MISS
+
+before: map[a1:example b2:second example]
+after: map[only:this]

@@ -1,0 +1,7 @@
+<!go
+
+_status_code(201)
+_setcookie("flavour", "chocolate")
+_header("X-Compat: yes")
+_header("Content-Type: text/plain; charset=utf-8")
+fmt.Println("created")

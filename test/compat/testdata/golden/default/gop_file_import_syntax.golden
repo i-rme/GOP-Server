@@ -1,0 +1,14 @@
+=== GET /examples/gop_file_import_syntax.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+2305
+=== GET /examples/gop_file_import_syntax.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+2305

@@ -1,0 +1,16 @@
+=== GET /examples/for_loop_100000.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+{{RANDOM_START}}...99999
+\ no newline at end of body
+=== GET /examples/for_loop_100000.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+{{RANDOM_START}}...99999
+\ no newline at end of body

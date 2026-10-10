@@ -1,0 +1,16 @@
+=== GET /examples/go_file.go
+--- 200
+Content-Type: text/plain; charset=utf-8
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+<h2>Your beautiful page goes here</h2>
+\ no newline at end of body
+=== GET /examples/go_file.go
+--- 200
+Content-Type: text/plain; charset=utf-8
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+<h2>Your beautiful page goes here</h2>
+\ no newline at end of body

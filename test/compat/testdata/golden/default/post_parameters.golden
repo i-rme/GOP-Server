@@ -1,0 +1,84 @@
+=== GET /examples/gop_file_post_parameters.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+The value of _POST["key"]:  
+<br/><br/>
+The value of the _POST map:  map[]
+<br/><br/>
+
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>
+=== POST /examples/gop_file_post_parameters.gop
+> [form] key=value&other=2
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _POST["key"]:  value
+<br/><br/>
+The value of the _POST map:  map[key:value other:2]
+<br/><br/>
+
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>
+=== POST /examples/gop_file_post_parameters.gop?key=fromquery
+> [form] key=frombody
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _POST["key"]:  frombody
+<br/><br/>
+The value of the _POST map:  map[key:frombody]
+<br/><br/>
+
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>
+=== POST /examples/gop_file_post_parameters.gop
+> [form] key=one&key=two
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _POST["key"]:  one
+<br/><br/>
+The value of the _POST map:  map[key:one]
+<br/><br/>
+
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>
+=== POST /examples/gop_file_post_parameters.gop
+> [multipart] key=multipart
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+The value of _POST["key"]:  
+<br/><br/>
+The value of the _POST map:  map[]
+<br/><br/>
+
+<form method="POST">
+  <label for="fname">Key:</label><br>
+  <input type="text" name="key" value="value"><br>
+  <input type="submit" value="Submit">
+</form>

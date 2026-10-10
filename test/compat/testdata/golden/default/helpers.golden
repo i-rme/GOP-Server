@@ -1,0 +1,52 @@
+=== GET /__compat/helpers.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+
+htmlentities: &lt;a href=&#34;x&#34;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;
+html_entity_decode: <b> &amp; 'q' "
+nl2br: a<br>b<br>
+echo:1 2three4.5 true
+base64_encode: aGVsbG8gZ29w
+base64_decode: hello gop
+base64_decode_invalid: true
+parseAuthentication: alice s3cret
+parseAuthentication_bearer: true true
+json_encode_struct: {"A":1,"B":"x"}
+json_encode_map: {"a":1,"b":2}
+json_encode_slice: ["x","y"]
+json_decode: {"a":1}
+string_to_int: 42 -7 0
+int_to_string: 99
+isset: false true false
+substr: bc abcdef
+date_format: true
+time_format: true
+_GET: map[]
+=== GET /__compat/helpers.gop
+--- 200
+Content-Type: text/html
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+
+htmlentities: &lt;a href=&#34;x&#34;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;
+html_entity_decode: <b> &amp; 'q' "
+nl2br: a<br>b<br>
+echo:1 2three4.5 true
+base64_encode: aGVsbG8gZ29w
+base64_decode: hello gop
+base64_decode_invalid: true
+parseAuthentication: alice s3cret
+parseAuthentication_bearer: true true
+json_encode_struct: {"A":1,"B":"x"}
+json_encode_map: {"a":1,"b":2}
+json_encode_slice: ["x","y"]
+json_decode: {"a":1}
+string_to_int: 42 -7 0
+int_to_string: 99
+isset: false true false
+substr: bc abcdef
+date_format: true
+time_format: true
+_GET: map[]

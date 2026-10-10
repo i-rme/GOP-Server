@@ -1,1 +1,3 @@
 /cache/*
+/bin/
+/test/compat/compat.test

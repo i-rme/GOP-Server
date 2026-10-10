@@ -1,0 +1,18 @@
+=== GET /examples/gop_file_with_headers.gop
+--- 302
+Content-Type: text/html
+Location: https://google.es/2
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: MISS
+X-Custom: example
+
+<h1>Headers test</h1>
+=== GET /examples/gop_file_with_headers.gop
+--- 302
+Content-Type: text/html
+Location: https://google.es/2
+Server: Golang Preprocessor for Web Services v1.0
+X-Cache-Status: HIT
+X-Custom: example
+
+<h1>Headers test</h1>
