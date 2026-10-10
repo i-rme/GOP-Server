@@ -26,6 +26,10 @@ func TestResolveInRoot(t *testing.T) {
 	if err := os.Symlink(filepath.Join(root, "sub"), filepath.Join(root, "inside")); err != nil {
 		t.Fatal(err)
 	}
+	root, err := RealDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
 	real := func(p string) string {
 		r, err := filepath.EvalSymlinks(filepath.Join(base, p))
 		if err != nil {

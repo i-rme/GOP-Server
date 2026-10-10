@@ -34,6 +34,7 @@ type Controller struct {
 	log    *slog.Logger
 	cache  *cache.Cache
 	worker *worker.Worker
+	parsed programs
 }
 
 // New returns a Controller with an empty cache in CacheRoot
@@ -65,9 +66,11 @@ func (c *Controller) Run(path, name, parameters string) Response {
 		return c.run(name, parser.Plain(path, src), parameters, false)
 	}
 
-	program, err := parser.Process(path, parser.Options{
-		MySQL:            c.config.MySQLSupportEnabled,
-		HeadersSeparator: c.config.GopHeadersSeparator,
+	program, err := c.parsed.get(path, func() (*parser.Program, error) {
+		return parser.Process(path, parser.Options{
+			MySQL:            c.config.MySQLSupportEnabled,
+			HeadersSeparator: c.config.GopHeadersSeparator,
+		})
 	})
 	if err != nil {
 		return c.fail(http.StatusInternalServerError, pages.ParseError, err.Error())

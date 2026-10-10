@@ -12,18 +12,19 @@ import (
 // ErrOutsideRoot means a request path leads out of the document root, through .. or a symlink
 var ErrOutsideRoot = errors.New("path is outside the document root")
 
-// ResolveInRoot returns the real path a URL path names inside root. Every request
-// path goes through it. It fails when the path does not exist or, after following
-// symlinks, is not inside root.
-func ResolveInRoot(root, urlPath string) (string, error) {
-	realRoot, err := filepath.EvalSymlinks(root)
+// RealDir returns dir as an absolute path with every symlink resolved, the form ResolveInRoot takes
+func RealDir(dir string) (string, error) {
+	real, err := filepath.EvalSymlinks(dir)
 	if err != nil {
 		return "", err
 	}
-	if realRoot, err = filepath.Abs(realRoot); err != nil {
-		return "", err
-	}
+	return filepath.Abs(real)
+}
 
+// ResolveInRoot returns the real path a URL path names inside realRoot, a directory
+// as RealDir returns it. Every request path goes through it. It fails when the path
+// does not exist or, after following symlinks, is not inside the root.
+func ResolveInRoot(realRoot, urlPath string) (string, error) {
 	// Cleaning against "/" drops any .. that would climb above the root
 	joined := filepath.Join(realRoot, filepath.FromSlash(path.Clean("/"+urlPath)))
 	real, err := filepath.EvalSymlinks(joined)
