@@ -64,6 +64,7 @@ func TestDurations(t *testing.T) {
 func TestInvalidValues(t *testing.T) {
 	for _, tc := range []struct{ json, want string }{
 		{`{"DenyFrom": ["10.1.2.0"]}`, `DenyFrom entry "10.1.2.0"`},
+		{`{"StatusAllowFrom": ["localhost"]}`, `StatusAllowFrom entry "localhost"`},
 		{`{"Port": 0}`, "Port 0"},
 		{`{"DocumentRoot": "missing"}`, `DocumentRoot "missing"`},
 		{`{"LoggingLevel": "loud"}`, `LoggingLevel "loud"`},

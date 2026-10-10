@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{template "title" .}} - {{.Signature}}</title>
+<style>
+	body { margin: 0; background: #effcff; color: #000; font-family: Arial, sans-serif; }
+	header { text-align: center; padding-top: 48px; }
+	h1 { margin: 12px 0 0; padding: 6px; background: #00b0dc; color: #fff; font-size: 1.6em; }
+	main { max-width: 760px; margin: 24px auto 48px; padding: 0 16px; }
+	pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
+	table { width: 100%; border-collapse: collapse; background: #fff; font-size: small; }
+	th, td { padding: 6px 8px; border: 1px solid #00b0dc; text-align: left; vertical-align: top; }
+	footer { text-align: center; color: #555; font-size: small; padding-bottom: 24px; }
+	{{block "style" .}}{{end}}
+</style>
+</head>
+<body>
+<header>
+	<img {{logo}} alt="" width="150" height="74">
+	<h1>{{template "title" .}}</h1>
+</header>
+<main>
+{{template "content" .}}
+</main>
+<footer>{{.Signature}}</footer>
+</body>
+</html>

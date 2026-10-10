@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/i-rme/gop-server/src/handler"
-	"github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/handler/pages"
 	"github.com/i-rme/gop-server/src/repository/filesystem"
 	"github.com/i-rme/gop-server/src/server/config"
 	"github.com/i-rme/gop-server/src/server/logs"
@@ -107,7 +107,7 @@ func recovered(next http.Handler, log *slog.Logger, signature string) http.Handl
 				}
 				log.Error("panic serving request", "path", r.URL.Path, "panic", err, "stack", string(debug.Stack()))
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, errors.Render(signature, errors.InternalError, ""))
+				fmt.Fprint(w, pages.Error(signature, pages.InternalError, ""))
 			}
 		}()
 		next.ServeHTTP(w, r)

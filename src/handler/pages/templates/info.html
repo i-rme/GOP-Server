@@ -1,0 +1,7 @@
+{{define "title"}}Gop Info{{end}}
+
+{{define "content"}}<table>
+{{- range .Settings}}
+<tr><th>{{.Name}}</th><td>{{.Value}}</td></tr>
+{{- end}}
+</table>{{end}}

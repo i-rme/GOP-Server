@@ -78,6 +78,8 @@ Existing scripts, configuration files and URLs keep working. A few things change
 - What a script writes to stderr is shown only when it fails; otherwise it goes to the debug log.
 - *RunScriptsAsNobody* really drops privileges for building and running scripts, or the server refuses to start.
 - `_SERVER["CURRENT_PATH"]` no longer starts with a stray `/` on Linux.
+- `/server-status/` and `/gop-info/` answer only clients in *StatusAllowFrom*, a list of CIDR ranges that defaults to the local machine (`["127.0.0.0/8", "::1/128"]`). `/server-status/?data=true` returns JSON, and the page no longer loads a script from a CDN.
+- The server's own pages (errors, status, info) have a new, simpler look.
 - Requests cannot reach files outside *DocumentRoot*, through `..` or through symbolic links. Paths in the configuration (aliases, the listing, denied and rate-limited scripts) can still point outside it.
 
 ## Important paths

@@ -223,8 +223,8 @@ func defaultCases() []testCase {
 			get("/server-status/?data=true"),
 			get("/server-status"),
 		}, Normalize: []rule{
-			re(`Current time: [^<]*`, "Current time: {{TIME}}"),
-			re(`"\d+"`, `"{{N}}"`),
+			re(`rendered at [^<]*`, "rendered at {{TIME}}"),
+			re(`"start":\d+,"count":\d+`, `"start":{{N}},"count":{{N}}`),
 		}},
 	}
 }

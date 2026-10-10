@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/i-rme/gop-server/src/controller"
-	"github.com/i-rme/gop-server/src/handler/errors"
+	"github.com/i-rme/gop-server/src/handler/pages"
 	"github.com/i-rme/gop-server/src/repository/filesystem"
 	"github.com/i-rme/gop-server/src/server/config"
 	"github.com/i-rme/gop-server/src/server/logs"
@@ -28,7 +28,6 @@ type Handler struct {
 	limiter    *rateLimiter
 	sessions   sessions
 	uploadKey  []byte
-	gopInfo    string
 
 	// Scripts named in the configuration, resolved once; they may live outside the document root
 	listingScript, deniedScript, rateLimitedScript script
@@ -60,7 +59,6 @@ func New(c *config.Config, log *slog.Logger, stats *logs.Stats) (*Handler, error
 		limiter:    newRateLimiter(c.RateLimitRate, time.Duration(c.RateLimitPeriod)*time.Second),
 		sessions:   sessions{name: c.SessionCookieName, key: c.Key("session")},
 		uploadKey:  c.Key("upload"),
-		gopInfo:    gopInfoPage(c),
 	}
 
 	configured := []struct {
@@ -97,7 +95,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Server", h.config.ServerSignature)
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 
-	if h.denied(ip) {
+	if config.Contains(h.config.DeniedNetworks, net.ParseIP(ip)) {
 		h.log.Warn("IP address is denied", "ip", ip)
 		h.run(w, r, h.deniedScript)
 		return
@@ -146,7 +144,7 @@ func (h *Handler) run(w http.ResponseWriter, r *http.Request, s script) {
 	params, err := h.parameters(r, s.urlPath)
 	if err != nil {
 		h.log.Warn("bad request", "error", err)
-		h.error(w, http.StatusBadRequest, errors.BadRequest, err.Error())
+		h.error(w, http.StatusBadRequest, pages.BadRequest, err.Error())
 		return
 	}
 	response := h.controller.Run(s.path, s.urlPath, params)
@@ -180,24 +178,14 @@ func (h *Handler) run(w http.ResponseWriter, r *http.Request, s script) {
 
 // notFound answers a request for a path that is not in the document root
 func (h *Handler) notFound(w http.ResponseWriter, urlPath string) {
-	h.error(w, http.StatusNotFound, errors.NotFound, urlPath)
+	h.error(w, http.StatusNotFound, pages.NotFound, urlPath)
 }
 
 // error answers with an error page
-func (h *Handler) error(w http.ResponseWriter, status, page int, details string) {
+func (h *Handler) error(w http.ResponseWriter, status int, kind pages.Kind, details string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	fmt.Fprint(w, errors.Render(h.config.ServerSignature, page, details))
-}
-
-// denied reports whether ip is in one of the DenyFrom ranges
-func (h *Handler) denied(ip string) bool {
-	parsed := net.ParseIP(ip)
-	for _, network := range h.config.DeniedNetworks {
-		if network.Contains(parsed) {
-			return true
-		}
-	}
-	return false
+	fmt.Fprint(w, pages.Error(h.config.ServerSignature, kind, details))
 }
 
 // logRequest logs a request and counts it for the status page

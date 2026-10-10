@@ -96,7 +96,7 @@ var droppedHeaders = map[string]bool{
 // literal substitutions of the site root and host.
 var globalRules = []rule{
 	re(`REMOTE_PORT:\d+`, "REMOTE_PORT:{{REMOTE_PORT}}"),
-	re(`(<b>Port</b></td> <td>)\d+`, "${1}{{PORT}}"),
+	re(`(<th>Port</th><td>)\d+`, "${1}{{PORT}}"),
 	re(`[0-9a-f]{64}`, "{{SHA256}}"),
 	re(`temp-\d+\.go`, "temp-{{N}}.go"),
 	re(`go-build\d+`, "go-build{{N}}"),
