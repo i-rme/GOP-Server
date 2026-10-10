@@ -35,7 +35,10 @@ func New(c *config.Config, log *slog.Logger) (*Server, error) {
 		return nil, err
 	}
 
-	h := handler.New(c, log, &logs.Stats{})
+	h, err := handler.New(c, log, &logs.Stats{})
+	if err != nil {
+		return nil, err
+	}
 	mux := http.NewServeMux()
 	mux.Handle("/", h)
 	mux.HandleFunc("/server-status/", h.ServerStatus)
@@ -46,9 +49,9 @@ func New(c *config.Config, log *slog.Logger) (*Server, error) {
 		http: &http.Server{
 			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(c.Port)),
 			Handler:        timed(mux, log),
-			ReadTimeout:    time.Duration(c.ReadTimeout),
-			WriteTimeout:   time.Duration(c.WriteTimeout),
-			IdleTimeout:    time.Duration(c.IdleTimeout),
+			ReadTimeout:    c.ReadTimeout.Std(),
+			WriteTimeout:   c.WriteTimeout.Std(),
+			IdleTimeout:    c.IdleTimeout.Std(),
 			MaxHeaderBytes: c.MaxHeaderBytes,
 			ErrorLog:       slog.NewLogLogger(log.Handler(), slog.LevelError),
 		},

@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -260,27 +261,22 @@ func TestLineDirectivesPointAtScript(t *testing.T) {
 	}
 }
 
-func TestSplitOutputAndHeaders(t *testing.T) {
+func TestSplitOutput(t *testing.T) {
 	sep := testOptions.HeadersSeparator
-	tests := []struct{ in, output, headers string }{
-		{"hello\n" + sep + ` ["X: 1"]`, "hello\n", `["X: 1"]`},
-		{"exited early", "exited early", "[]"},
-		{"fake " + sep + " [\"X: 0\"]\n" + sep + ` ["X: 1"]`, "fake " + sep + " [\"X: 0\"]\n", `["X: 1"]`},
+	trailer := sep + ` {"status":404,"headers":[["X","1"]]}` + "\n"
+	tests := []struct {
+		in, output string
+		trailer    *Trailer
+	}{
+		{"hello\n" + trailer, "hello\n", &Trailer{404, [][2]string{{"X", "1"}}}},
+		{"exited early", "exited early", nil},
+		{"fake " + sep + " {}\n" + trailer, "fake " + sep + " {}\n", &Trailer{404, [][2]string{{"X", "1"}}}},
+		{"broken\n" + sep + " {", "broken\n" + sep + " {", nil},
 	}
 	for _, test := range tests {
-		output, headers := SplitOutputAndHeaders(test.in, sep)
-		if output != test.output || headers != test.headers {
-			t.Errorf("SplitOutputAndHeaders(%q) = %q, %q", test.in, output, headers)
+		output, trailer := SplitOutput(test.in, sep)
+		if output != test.output || !reflect.DeepEqual(trailer, test.trailer) {
+			t.Errorf("SplitOutput(%q) = %q, %+v", test.in, output, trailer)
 		}
-	}
-}
-
-func TestSplitOutputAndWorkDirectory(t *testing.T) {
-	output, dir := SplitOutputAndWorkDirectory("WORK=/tmp/go-build1\nhello")
-	if output != "hello" || dir != "/tmp/go-build1" {
-		t.Errorf("got %q, %q", output, dir)
-	}
-	if output, dir := SplitOutputAndWorkDirectory("go: not found"); output != "go: not found" || dir != "" {
-		t.Errorf("got %q, %q", output, dir)
 	}
 }

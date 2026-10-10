@@ -1,29 +1,27 @@
 package parser
 
 import (
-	"regexp"
+	"encoding/json"
 	"strings"
 )
 
-var workLine = regexp.MustCompile(`WORK=([^\n]*)\n`)
-
-// SplitOutputAndWorkDirectory accepts a go run --work output and returns the output and the working directory.
-// The directory is empty when the output has no WORK line, which means the go command itself failed.
-func SplitOutputAndWorkDirectory(combinedOutput string) (string, string) {
-	match := workLine.FindStringSubmatchIndex(combinedOutput)
-	if match == nil {
-		return combinedOutput, ""
-	}
-	return combinedOutput[match[1]:], combinedOutput[match[2]:match[3]]
+// Trailer is what a script reports about its response after its output
+type Trailer struct {
+	Status  int         `json:"status"`  // 0 when the script set none
+	Headers [][2]string `json:"headers"` // name and value, in the order they were set
 }
 
-// SplitOutputAndHeaders separates the script output from the JSON headers printed after the separator.
-// The last separator wins, so a script printing the separator cannot hide its real headers;
-// a script that exits before printing any (os.Exit, panic) gets no headers.
-func SplitOutputAndHeaders(combinedOutput, separator string) (string, string) {
-	i := strings.LastIndex(combinedOutput, separator+" ")
+// SplitOutput separates a script's output from the trailer the runtime prints after the separator.
+// The last separator wins, so a script printing the separator cannot spoof headers.
+// The trailer is nil when the script exited before printing one (os.Exit, panic) or it is malformed.
+func SplitOutput(stdout, separator string) (string, *Trailer) {
+	i := strings.LastIndex(stdout, separator+" ")
 	if i < 0 {
-		return combinedOutput, "[]"
+		return stdout, nil
 	}
-	return combinedOutput[:i], combinedOutput[i+len(separator)+1:]
+	var trailer Trailer
+	if err := json.Unmarshal([]byte(stdout[i+len(separator)+1:]), &trailer); err != nil {
+		return stdout, nil
+	}
+	return stdout[:i], &trailer
 }

@@ -10,11 +10,6 @@ import (
 	"testing"
 )
 
-// hangReason explains the two examples that are not replayed: on a cache miss
-// the server runs `go run` with no timeout, so an infinite loop ties up the
-// request until WriteTimeout and leaves a process filling memory forever.
-const hangReason = "hangs on a cache miss: the build step has no timeout (see rewrite plan, worker timeouts)"
-
 func scenarios() []scenario {
 	return []scenario{
 		{Name: "default", Cases: defaultCases()},
@@ -114,8 +109,8 @@ func defaultCases() []testCase {
 		{Name: "errors_gop_without_tag", Steps: twice("/examples/errors/gop_without_tag.gop")},
 		{Name: "errors_go_file_empty", Steps: twice("/examples/errors/go_file_empty.go")},
 		{Name: "errors_go_file_without_import", Steps: twice("/examples/errors/go_file_without_import.go")},
-		{Name: "errors_gop_file_while_true", Steps: twice("/examples/errors/gop_file_while_true.gop"), Skip: hangReason},
-		{Name: "errors_go_file_while_true", Steps: twice("/examples/errors/go_file_while_true.go"), Skip: hangReason},
+		{Name: "errors_gop_file_while_true", Steps: twice("/examples/errors/gop_file_while_true.gop")},
+		{Name: "errors_go_file_while_true", Steps: twice("/examples/errors/go_file_while_true.go")},
 
 		// GET and POST parameters.
 		{Name: "get_parameters", Steps: []step{

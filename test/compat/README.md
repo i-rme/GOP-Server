@@ -60,13 +60,6 @@ Kept to what genuinely changes between runs:
 Compiler error pages are recorded verbatim, so goldens are tied to the Go minor
 version CI pins (1.24).
 
-## Not replayed
-
-`errors/gop_file_while_true.gop` and `errors/go_file_while_true.go` are listed but
-skipped: on a cache miss the build step has no timeout, so the request hangs until
-`WriteTimeout` and the `for {}` process keeps running and buffering output. Once
-the rewrite adds build timeouts they should get real cases.
-
 ## Changing behaviour on purpose
 
 The goldens record today's behaviour, warts included (for example `_GET` also

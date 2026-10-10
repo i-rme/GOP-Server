@@ -14,6 +14,7 @@ const (
 	BuildFailedParsing
 	RunFailedGoFatal
 	RunFailedGopFatal
+	BuildTimeout
 )
 
 // Render returns an error page in HTML; signature is the configured ServerSignature
@@ -43,6 +44,9 @@ func Render(signature string, errorCode int, details string) string {
 	case RunFailedGoFatal:
 		title = "The GO execution command exited unexpectedly"
 		subtitle = details + "\n\nTry disabling RunScriptsAsNobody in the configuration."
+	case BuildTimeout:
+		title = "Build timeout"
+		subtitle = "Building the script " + details + " took longer than BuildTimeout."
 	case BuildFailedParsing:
 		title = "There was an error in your .gop source"
 		subtitle = details

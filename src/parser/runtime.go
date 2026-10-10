@@ -23,9 +23,8 @@ var _GET, _POST, _COOKIE, _SERVER, _SESSION, _HEADER map[string]string
 
 // Private Variables
 var __sessionActive = false
-var __responseHeader = make([]string, 0)
-
-var _ = os.Hostname // Dummy assignment to avoid os import not used
+var __status = 0              // HTTP status set by the script, 0 for the server's default
+var __headers = [][2]string{} // response headers set by the script, in order
 
 // Public Methods
 func _htmlentities(input string) string {
@@ -40,16 +39,21 @@ func _nl2br(input string) string {
 func _echo(input ...interface{}) {
 	fmt.Print(input...)
 }
+
+// _header adds a "Name: value" header, or sets the status when given a bare code like "404"
 func _header(input string) {
-	__responseHeader = append(__responseHeader, input)
+	if name, value, ok := strings.Cut(input, ": "); ok {
+		__headers = append(__headers, [2]string{name, value})
+	} else if code, err := strconv.Atoi(strings.TrimSpace(input)); err == nil {
+		__status = code
+	}
 }
 func _redirect(input string) {
 	_header("302")
 	_header("Location: " + input)
 }
 func _status_code(input int) {
-	inputString := strconv.Itoa(input)
-	_header(inputString)
+	__status = input
 }
 func _setcookie(name, value string) {
 	_header("Set-Cookie: " + name + "=" + value)
@@ -133,28 +137,17 @@ func __session_call() {
 		_setcookie(__sessionCookieName, base64.StdEncoding.EncodeToString(sessionJSON))
 	}
 }
-func __housekeeping() {
 
-	// Required to handle sessions
+// __housekeeping ends the output with the trailer the server reads the response from:
+// the separator, a space and {"status":N,"headers":[[name,value],...]} on one line
+func __housekeeping() {
 	__session_call()
 
-	// Required to add content type if missing
-	var hasContentType = false
-
-	for i := range __responseHeader {
-		if strings.HasPrefix(__responseHeader[i], "Content-Type") {
-			hasContentType = true
-			break
-		}
-	}
-
-	if !hasContentType {
-		_header("Content-Type: text/html")
-	}
-
-	// Required to pass headers to the controller
-	_headersJSON, _ := json.Marshal(__responseHeader)
-	fmt.Println(__headersSeparator, string(_headersJSON))
+	trailer, _ := json.Marshal(struct {
+		Status  int         `json:"status"`
+		Headers [][2]string `json:"headers"`
+	}{__status, __headers})
+	fmt.Fprintln(os.Stdout, __headersSeparator, string(trailer))
 }
 
 // TO-DO Move it

@@ -1,51 +1,72 @@
-// Package cache remembers the compiled binary of each script.
+// Package cache keeps compiled scripts on disk, keyed by the hash of their generated source.
+//
+// The key changes with any edit to a script or to a file it requires, so an
+// entry never goes stale and needs no freshness checks: a cached binary
+// exists exactly when its source has been built before.
 package cache
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
-	"time"
 )
 
-// Cache maps a script path to its compiled binary. It is safe for concurrent use.
+// binaryName is the file a build leaves in its entry directory
+const binaryName = "app"
+
+// Cache is a directory with one subdirectory per built source. It is safe for concurrent use.
 type Cache struct {
-	mu      sync.Mutex
-	entries map[string]entry
+	root string
+
+	mu    sync.Mutex
+	locks map[string]*sync.Mutex // per key, so a source is built once however many requests ask
 }
 
-type entry struct {
-	binary string
-	built  time.Time
+// New returns a cache stored in root, which must exist
+func New(root string) *Cache {
+	return &Cache{root: root, locks: make(map[string]*sync.Mutex)}
 }
 
-// New returns an empty cache
-func New() *Cache {
-	return &Cache{entries: make(map[string]entry)}
+// Key is the cache key of a source
+func Key(source string) string {
+	sum := sha256.Sum256([]byte(source))
+	return hex.EncodeToString(sum[:])
 }
 
-// Put records the binary that `go run --work` built for source in workDir;
-// name is the file go run was given, which names the binary
-func (c *Cache) Put(source, workDir, name string) {
-	binary := filepath.Join(workDir, "b001", "exe", strings.TrimSuffix(filepath.Base(name), filepath.Ext(name)))
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.entries[filepath.Clean(source)] = entry{binary: binary, built: time.Now()}
-}
-
-// GetIfFresh returns the binary built for source, or "" when there is none
-// or source changed since it was built
-func (c *Cache) GetIfFresh(source string) string {
-	info, err := os.Stat(source)
-	if err != nil {
-		return ""
+// Get returns the binary for key, calling build to create it unless it exists;
+// hit reports whether it did. build gets the entry's directory and the binary path,
+// and must create the binary atomically. Concurrent calls for one key build it once.
+func (c *Cache) Get(key string, build func(dir, binary string) error) (binary string, hit bool, err error) {
+	binary = filepath.Join(c.root, key, binaryName)
+	if exists(binary) {
+		return binary, true, nil
 	}
+
+	unlock := c.lock(key)
+	defer unlock()
+	if exists(binary) { // built while this call waited
+		return binary, false, nil
+	}
+	return binary, false, build(filepath.Join(c.root, key), binary)
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// lock serializes builds of one key; call the returned function to unlock
+func (c *Cache) lock(key string) (unlock func()) {
 	c.mu.Lock()
-	e := c.entries[filepath.Clean(source)]
+	lock, ok := c.locks[key]
+	if !ok {
+		lock = new(sync.Mutex)
+		c.locks[key] = lock
+	}
 	c.mu.Unlock()
-	if e.built.After(info.ModTime()) {
-		return e.binary
-	}
-	return ""
+
+	lock.Lock()
+	return lock.Unlock
 }
