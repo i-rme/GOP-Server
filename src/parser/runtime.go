@@ -91,9 +91,13 @@ func _json_encode(plain interface{}) string {
 	encoded, _ := json.Marshal(plain)
 	return string(encoded)
 }
+
+// _json_decode returns the decoded value: map[string]interface{}, []interface{}, string,
+// float64, bool or nil; invalid JSON gives nil
 func _json_decode(encoded string) interface{} {
-	//TO-DO
-	return encoded
+	var decoded interface{}
+	json.Unmarshal([]byte(encoded), &decoded)
+	return decoded
 }
 func _string_to_int(input string) int {
 	integer, err := strconv.Atoi(input)
@@ -152,26 +156,22 @@ func __housekeeping() {
 	fmt.Fprintln(os.Stdout, __headersSeparator, string(trailer))
 }
 
-// TO-DO Move it
+var (
+	__basicAuth   = regexp.MustCompile("Basic (.*)")
+	__userAndPass = regexp.MustCompile("(.*):(.*)")
+)
+
 func extractBasicAuthHeader(input string) string {
-	r := regexp.MustCompile("Basic (.*)") // Matches Basic Auth Base64
-	match := r.FindStringSubmatch(input)
-
-	if len(match) == 0 {
-		return ""
+	if match := __basicAuth.FindStringSubmatch(input); match != nil {
+		return match[1]
 	}
-
-	return match[1]
+	return ""
 }
 func splitByColon(input string) (string, string) {
-	r := regexp.MustCompile("(.*):(.*)") // Matches each part
-	match := r.FindStringSubmatch(input)
-
-	if len(match) == 0 {
-		return "", ""
+	if match := __userAndPass.FindStringSubmatch(input); match != nil {
+		return match[1], match[2]
 	}
-
-	return match[1], match[2]
+	return "", ""
 }
 
 func init() {
