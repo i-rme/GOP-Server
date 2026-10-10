@@ -3,34 +3,23 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"pfg/src/server/config"
-	"pfg/src/server/logs"
 	"strconv"
 	"time"
 )
 
-var serverStatus string
+// ServerStatus serves the /server-status/ page, and with ?data=true the script updating its chart
+func (h *Handler) ServerStatus(w http.ResponseWriter, r *http.Request) {
+	config := h.config
+	var serverStatus string
 
-func init() {
-
-}
-
-// ServerStatus tries to handle the request
-func ServerStatus(w http.ResponseWriter, r *http.Request) {
-
-	r.ParseForm() //ParseForm populates r.Form and r.PostForm. (GET and POST parameters)
-	GET := parseGET(r)
-
-	if GET["data"] == "true" {
-
-		currentTime := int32(time.Now().Round(5 * time.Second).Unix()) //Timestamp rounded to 5 seconds
-
+	if r.FormValue("data") == "true" {
 		labels := " ["
 		values := " ["
 
-		for pastTime := currentTime; currentTime-pastTime < 300; pastTime -= 5 {
-			labels += `"` + fmt.Sprint(pastTime) + `", `
-			values += `"` + fmt.Sprint(logs.RequestStats[pastTime]) + `", `
+		starts, counts := h.stats.Recent(time.Now())
+		for i := range starts {
+			labels += `"` + fmt.Sprint(starts[i].Unix()) + `", `
+			values += `"` + fmt.Sprint(counts[i]) + `", `
 		}
 
 		labels += "]"
@@ -173,7 +162,7 @@ func ServerStatus(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	logs.WriteRequest(r.RemoteAddr, r.Method, r.Host, r.RequestURI, r.Proto)
+	h.logRequest(r)
 	w.Header().Set("Server", config.ServerSignature)
 	w.Header().Add("Content-Type", "text/html")
 	fmt.Fprint(w, serverStatus)

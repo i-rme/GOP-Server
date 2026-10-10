@@ -16,27 +16,26 @@ jobs:
         with:
           go-version: "1.24.x"
 
+      - name: gofmt
+        run: test -z "$(gofmt -l src test)" || { gofmt -l src test; exit 1; }
+
       - name: go vet
         run: |
           go vet ./src/...
           cd test/compat && go vet ./...
 
+      - name: Unit tests
+        run: go test -race ./src/...
+
       - name: Build server
         run: go build -o bin/gop-server ./src
 
-      - name: Build compat suite
-        working-directory: test/compat
-        run: go test -c -o compat.test .
-
-      # The current server creates its cache directory with mode 0666, which only
-      # root can write into, so the suite runs as root (as the README's sudo does).
       - name: Compat suite
         working-directory: test/compat
-        run: |
-          sudo env "PATH=$PATH" \
-            GOP_SERVER_BIN="$GITHUB_WORKSPACE/bin/gop-server" \
-            GOP_COMPAT_OUT="$RUNNER_TEMP/compat-actual" \
-            ./compat.test -test.v -test.count=1
+        env:
+          GOP_SERVER_BIN: ${{ github.workspace }}/bin/gop-server
+          GOP_COMPAT_OUT: ${{ runner.temp }}/compat-actual
+        run: go test -count=1 -v .
 
       - name: Upload actual responses
         if: failure()

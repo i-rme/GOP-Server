@@ -1,4 +1,4 @@
-module pfg
+module github.com/i-rme/gop-server
 
 go 1.22
 

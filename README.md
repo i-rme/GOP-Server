@@ -53,6 +53,15 @@ nano config/configuration.json
 ### WSL
 ```wsl sudo go run src/main.go```
 
+Root is only needed to listen on port 80. With a `Port` above 1024, `go run src/main.go` is enough.
+
+To use a configuration file somewhere else, pass its path: ```go run src/main.go -config /etc/gop/configuration.json```
+
+## Configuration
+Every key in `config/configuration.json` is optional; a missing key takes its default from `src/server/config/config.go`, which matches the shipped file except that there are no aliases or denied ranges and logging is at the `basic` level. Timeouts can be written in nanoseconds, as in the shipped file, or as strings like `"12s"` or `"1m"`. A configuration with a bad value (an invalid `DenyFrom` range, a missing `DocumentRoot`, an unknown `LoggingLevel`) stops the server at startup with a message naming the key.
+
+Set *GopKeySalt* to a long random string. While it keeps the placeholder value, the server picks a random one at each start and logs a warning.
+
 ## Optional Settings
 Enable database support by setting *MySQLSupportEnabled* to `true` in the config file.
 
@@ -67,8 +76,6 @@ Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the conf
 
 **Default uploads directory**: `./private/uploads`
 
-**CMS Example database details**: `./public/examples/cms/components/repository.gop`
-
 ## Troubleshooting
 **Error**: *CreateFile src/main.go: The system cannot find the path specified.* when launching the GOP Server with go run.
 
@@ -80,7 +87,7 @@ Enable privilege downgrade by setting *RunScriptsAsNobody* to `true` in the conf
 
 **Error**: "*listen tcp 127.0.0.1:80: bind: permission denied*" when starting the server on linux.
 
-**Solution**: Run the server with root privileges ```sudo go run src/main.go```
+**Solution**: Run the server with root privileges ```sudo go run src/main.go```, or set *Port* above 1024.
 
 
 ## Architecture

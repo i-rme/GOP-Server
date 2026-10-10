@@ -25,10 +25,6 @@ go test ./... -run 'TestCompat/default/sessions' -args -update
 | `GOP_SERVER_BIN` | builds `./src` from the repository root | server binary under test |
 | `GOP_COMPAT_OUT` | unset | on a mismatch, write the actual output here (CI uploads it) |
 
-On Linux the current server only works as root: it recreates its cache directory
-with mode `0666`, which no other user can write into. CI runs the compiled suite
-with `sudo` for that reason.
-
 ## How it works
 
 Each scenario in `cases_test.go` copies the site into a temp directory, writes

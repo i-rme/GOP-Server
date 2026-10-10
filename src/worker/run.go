@@ -1,78 +1,51 @@
+// Package worker runs the go tool and compiled scripts.
 package worker
 
 import (
 	"context"
+	"errors"
 	"os/exec"
-	"pfg/src/handler/errors"
-	"pfg/src/server/config"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/i-rme/gop-server/src/parser"
 )
 
-// Run calls a binary with timeout returning the output
-func Run(path, parameters string, seconds int) (string, bool) {
+// ErrTimeout means a script ran longer than it was allowed to
+var ErrTimeout = errors.New("execution timeout")
 
-	if runtime.GOOS == "windows" || !config.RunScriptsAsNobody {
-		return runGeneric(path, parameters, seconds)
-	} else {
-		return runLinux(path, parameters, seconds)
+// BuildAndRun runs a Go file with `go run --work`. It returns the program's output
+// and the work directory holding the binary, which is empty when the go command
+// itself failed. On failure the output starts with the error.
+func BuildAndRun(path, parameters string) (output, workDir string, err error) {
+	command := exec.Command("go", "run", "--work", path, "-PARAMETERS="+parameters)
+	combined, err := command.CombinedOutput()
+	output, workDir = parser.SplitOutputAndWorkDirectory(strings.TrimSuffix(string(combined), "\n"))
+	if err != nil {
+		return err.Error() + "\n" + output, workDir, err
 	}
+	return output, workDir, nil
 }
 
-// runGeneric calls a binary with timeout returning the output
-func runGeneric(path, parameters string, seconds int) (string, bool) {
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds)*time.Second)
+// Run runs a compiled script for at most timeout, as nobody when asNobody is set
+// on systems that have setpriv. On failure the output starts with the error.
+func Run(binary, parameters string, timeout time.Duration, asNobody bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	command := exec.CommandContext(ctx, path, `-PARAMETERS=`+parameters)
-	outputBytes, err := command.CombinedOutput()
-	output := strings.TrimSuffix(string(outputBytes), "\n")
+	args := []string{binary, "-PARAMETERS=" + parameters}
+	if asNobody && runtime.GOOS != "windows" {
+		args = append([]string{"setpriv", "--no-new-privs", "--reuid=nobody"}, args...)
+	}
+	combined, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+	output := strings.TrimSuffix(string(combined), "\n")
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return errors.Render(errors.ExecutionTimeout, path), false
+		return output, ErrTimeout
 	}
-
 	if err != nil {
-		return err.Error() + "\n" + output, false
+		return err.Error() + "\n" + output, err
 	}
-
-	return output, true
-}
-
-// runLinux calls a binary with timeout returning the output
-func runLinux(path, parameters string, seconds int) (string, bool) {
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds)*time.Second)
-	defer cancel()
-
-	// Runs as nobody
-	command := exec.CommandContext(ctx, `setpriv`, `--no-new-privs`, `--reuid=nobody`, path, `-PARAMETERS=`+parameters)
-
-	outputBytes, err := command.CombinedOutput()
-	output := strings.TrimSuffix(string(outputBytes), "\n")
-
-	if ctx.Err() == context.DeadlineExceeded {
-		return errors.Render(errors.ExecutionTimeout, path), false
-	}
-
-	if err != nil {
-		return err.Error() + "\n" + output, false
-	}
-
-	return output, true
-}
-
-// runWithoutTimeout calls a binary and returns the ouput (DEPRECATED)
-func runWithoutTimeout(path string) (string, bool) {
-	command := exec.Command(path)
-	outputBytes, err := command.CombinedOutput()
-	output := strings.TrimSuffix(string(outputBytes), "\n")
-
-	if err != nil { // TO-DO handle the error
-		return err.Error() + "\n" + output, false
-	}
-
-	return output, true
+	return output, nil
 }

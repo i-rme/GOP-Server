@@ -2,22 +2,18 @@ package errors
 
 import (
 	"bufio"
-	"pfg/src/repository/filesystem"
-	"pfg/src/server/logs"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-//GetError gets a syntax error output and tries to obtain the source code that trigged it
+// GetError gets a syntax error output and tries to obtain the source code that trigged it
 func GetError(details string) string {
 
 	_, fileName, line, _, explanation := ParseDetails(details)
-	source, err := filesystem.Read(fileName)
-
+	source, err := os.ReadFile(fileName)
 	if err != nil {
-		logs.WriteError("ERROR: ErrorExplainer was unable to parse the details of the error. Unhandled error?")
-		source = "ERROR: ErrorExplainer was unable to parse the details of the error. Unhandled error?"
 		return details
 	}
 
@@ -29,12 +25,12 @@ The code related to the error is shown below:
 	
 `
 
-	error += GetErrorLines(source, line) // Add source lines related
+	error += GetErrorLines(string(source), line) // Add source lines related
 
 	return error
 }
 
-//GetErrorLines gets a syntax error output and tries to obtain the source code that trigged it
+// GetErrorLines gets a syntax error output and tries to obtain the source code that trigged it
 func GetErrorLines(source string, line int) string {
 
 	errorLines := ""
